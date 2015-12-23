@@ -18,7 +18,7 @@ except:
 setup( 
     name='nysa-artemis-pcie-platform',
     version='0.1.0',
-    description='ArtemisPcie platform for Nysa',
+    description='ArtemisPCIE platform for Nysa',
     author='Cospan Design',
     author_email='user@example.com',
     packages=find_packages('.'),

@@ -1,6 +1,6 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <testsuites name="results">
   <testsuite name="all" package="all" tests="0">
-    <testcase classname="test_dut" name="first_test" time="0.8494749069213867" />
+    <testcase classname="test_dut" name="first_test" time="0.05846905708312988" />
   </testsuite>
 </testsuites>

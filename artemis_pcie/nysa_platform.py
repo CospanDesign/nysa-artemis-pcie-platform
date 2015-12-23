@@ -20,7 +20,7 @@
 #SOFTWARE.
 
 """
-ArtemisPcie Interface
+ArtemisPCIE Interface
 """
 __author__ = 'dave.mccoy@cospandesign.com (Dave McCoy)'
 
@@ -33,16 +33,16 @@ import hashlib
 
 from nysa.host.nysa_platform import Platform
 from nysa.ibuilder.lib.xilinx_utils import find_xilinx_path
-from artemis-pcie import ArtemisPcie
+from artemis_pcie import ArtemisPCIE
 
 
-class ArtemisPciePlatform(Platform):
+class ArtemisPCIEPlatform(Platform):
     def __init__(self, status = None):
-        super (ArtemisPciePlatform, self).__init__(status)
+        super (ArtemisPCIEPlatform, self).__init__(status)
 
     def get_type(self):
-        if self.status: self.status.Verbose("Returnig 'artemis-pcie' type")
-        return "artemis-pcie"
+        if self.status: self.status.Verbose("Returnig 'artemis_pcie' type")
+        return "artemis_pcie"
 
     def scan(self):
         """
@@ -54,7 +54,7 @@ class ArtemisPciePlatform(Platform):
 
 
         Returns:
-            Dictionary of artemis-pcie instances, where the key is the serial number
+            Dictionary of artemis_pcie instances, where the key is the serial number
             or unique identifier of a board
 
         Raises:

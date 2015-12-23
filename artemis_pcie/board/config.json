@@ -1,0 +1,28 @@
+{
+  "board_name":"Artemis_PCIE",
+  "vendor":"Cospan Design",
+  "host_inteface":"ft_master_interface",
+  "default_constraint_files":[
+    "artemis-usb2.ucf"
+    ],
+  "parent_board":[
+    "artemis"
+    ],
+  "image":"artemis.png",
+  "default_project":"default.json",
+  "invert_reset":true,
+
+  "build_flags":{
+    "bitgen":{
+      "config":{
+        "Binary":"Yes"
+       }
+    },
+    "xst":{
+      "flags":{
+        "-sd":"{cores}",
+        "-netlist_hierarchy":"rebuilt"
+      }
+    }
+  }
+}

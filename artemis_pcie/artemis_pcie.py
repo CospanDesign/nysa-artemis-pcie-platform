@@ -1,9 +1,9 @@
-""" artemis-pcie
+""" artemis_pcie
 
-Concrete interface for Nysa on the artemis-pcie board
+Concrete interface for Nysa on the artemis_pcie board
 """
 
-__author__ = 'you@example.com'
+__author__ = 'dave.mccoy@cospandesign.com.com'
 
 import sys
 import os
@@ -15,7 +15,7 @@ from nysa.host.nysa import Nysa
 from nysa.host.nysa import NysaError
 from nysa.host.nysa import NysaCommError
 
-class ArtemisPcie(Nysa):
+class ArtemisPCIE(Nysa):
 
     def __init__(self, dev_dict, status = None):
         Nysa.__init__(self, status)
@@ -179,7 +179,7 @@ class ArtemisPcie(Nysa):
         raise AssertionError("%s not implemented" % sys._getframe().f_code.co_name)
 
     def get_board_name(self):
-        return "artemis-pcie"
+        return "artemis_pcie"
 
     def upload(self, filepath):
         """
