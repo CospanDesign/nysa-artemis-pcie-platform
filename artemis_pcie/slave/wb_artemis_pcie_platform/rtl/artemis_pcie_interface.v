@@ -29,16 +29,12 @@ SOFTWARE.
  */
 
 module artemis_pcie_interface #(
-  parameter CONTROL_FIFO_DEPTH       = 7,
-  parameter DATA_FIFO_DEPTH          = 9
+  parameter CONTROL_FIFO_DEPTH        = 7,
+  parameter DATA_FIFO_DEPTH           = 9,
+  parameter SERIAL_NUMBER             = 64'h000000000000C594
 )(
   input                     clk,
   input                     rst,
-  //output  reg   [7:0]       o_reg_example
-  //input         [7:0]       i_reg_example
-
-
-
 
   //The Following Signals are clocked at 62.5MHz
 
@@ -94,8 +90,7 @@ module artemis_pcie_interface #(
 
   // Configuration: System/Status
   output      [2:0]         cfg_pcie_link_state,
-  input                     cfg_trn_pending,
-  input       [63:0]        cfg_dsn,
+  input                     cfg_trn_pending_stb,
   output      [7:0]         cfg_bus_number,
   output      [4:0]         cfg_device_number,
   output      [2:0]         cfg_function_number,
@@ -109,9 +104,34 @@ module artemis_pcie_interface #(
 
   // System Interface
   output                    pcie_reset,
-  output                    received_hot_reset
+  output                    received_hot_reset,
+
+  input                     i_cmd_in_rd_stb,
+  output                    o_cmd_in_rd_ready,
+  input                     i_cmd_in_rd_activate,
+  output      [23:0]        o_cmd_in_rd_count,
+  output      [31:0]        o_cmd_in_rd_data,
+
+  output      [1:0]         o_cmd_out_wr_ready,
+  input       [1:0]         i_cmd_out_wr_activate,
+  output      [23:0]        o_cmd_out_wr_size,
+  input                     i_cmd_out_wr_stb,
+  input       [31:0]        i_cmd_out_wr_data,
+
+  input                     i_data_in_rd_stb,
+  output                    o_data_in_rd_ready,
+  input                     i_data_in_rd_activate,
+  output      [23:0]        o_data_in_rd_count,
+  output      [31:0]        o_data_in_rd_data,
+
+  output      [1:0]         o_data_out_wr_ready,
+  input       [1:0]         i_data_out_wr_activate,
+  output      [23:0]        o_data_out_wr_size,
+  input                     i_data_out_wr_stb,
+  input       [31:0]        i_data_out_wr_data
 
 );
+
 //local parameters
 localparam      CONTROL_FIFO_SIZE     = (2 ** CONTROL_FIFO_DEPTH);
 localparam      DATA_FIFO_SIZE        = (2 ** DATA_FIFO_DEPTH);
@@ -132,18 +152,6 @@ wire  [23:0]                c_in_wr_size;
 wire                        c_in_wr_stb;
 wire  [31:0]                c_in_wr_data;
 
-wire                        c_in_rd_stb;
-wire                        c_in_rd_ready;
-wire                        c_in_rd_activate;
-wire  [23:0]                c_in_rd_count;
-wire  [31:0]                c_in_rd_data;
-
-
-wire  [1:0]                 c_out_wr_ready;
-wire  [1:0]                 c_out_wr_activate;
-wire  [23:0]                c_out_wr_size;
-wire                        c_out_wr_stb;
-wire  [31:0]                c_out_wr_data;
 
 wire                        c_out_rd_stb;
 wire                        c_out_rd_ready;
@@ -159,18 +167,6 @@ wire  [1:0]                 d_in_wr_activate;
 wire  [23:0]                d_in_wr_size;
 wire                        d_in_wr_stb;
 wire  [31:0]                d_in_wr_data;
-
-wire                        d_in_rd_stb;
-wire                        d_in_rd_ready;
-wire                        d_in_rd_activate;
-wire  [23:0]                d_in_rd_count;
-wire  [31:0]                d_in_rd_data;
-
-wire  [1:0]                 d_out_wr_ready;
-wire  [1:0]                 d_out_wr_activate;
-wire  [23:0]                d_out_wr_size;
-wire                        d_out_wr_stb;
-wire  [31:0]                d_out_wr_data;
 
 wire                        d_out_rd_stb;
 wire                        d_out_rd_ready;
@@ -222,9 +218,22 @@ wire          [3:0]         s_axis_tx_tuser;
 wire                        s_axis_tx_tlast;
 wire                        s_axis_tx_tvalid;
 
+wire                        cfg_trn_pending;
+
+
 
 
 //submodules
+
+cross_clock_strobe trn_pnd(
+  .in_clk           (clk                ),
+  .in_stb           (cfg_trn_pending_stb),
+
+  .out_clk          (clk_62p5           ),
+  .out_stb          (cfg_trn_pending    )
+);
+
+
 `ifdef SIMULATION
 
 sim_pcie_axi_bridge #(
@@ -315,7 +324,7 @@ pcie_axi_bridge pcie_interface(
   // Configuration: System/Status
   .cfg_pcie_link_state               (cfg_pcie_link_state     ),
   .cfg_trn_pending                   (cfg_trn_pending         ),
-  .cfg_dsn                           (cfg_dsn                 ),
+  .cfg_dsn                           (SERIAL_NUMBER           ),
   .cfg_bus_number                    (cfg_bus_number          ),
   .cfg_device_number                 (cfg_device_number       ),
   .cfg_function_number               (cfg_function_number     ),
@@ -374,13 +383,13 @@ ppfifo #(
   .starved          (                 ),
 
   //Read Size
-  .read_clock       (clk              ),
-  .read_strobe      (c_in_rd_stb      ),
-  .read_ready       (c_in_rd_ready    ),
-  .read_activate    (c_in_rd_activate ),
-  .read_count       (c_in_rd_count    ),
-  .read_data        (c_in_rd_data     ),
-  .inactive         (                 )
+  .read_clock       (clk                  ),
+  .read_strobe      (i_cmd_in_rd_stb      ),
+  .read_ready       (o_cmd_in_rd_ready    ),
+  .read_activate    (i_cmd_in_rd_activate ),
+  .read_count       (o_cmd_in_rd_count    ),
+  .read_data        (o_cmd_in_rd_data     ),
+  .inactive         (                     )
 );
 
 ppfifo #(
@@ -393,11 +402,11 @@ ppfifo #(
 
   //Write Side
   .write_clock      (clk              ),
-  .write_ready      (c_out_wr_ready   ),
-  .write_activate   (c_out_wr_activate),
-  .write_fifo_size  (c_out_wr_size    ),
-  .write_strobe     (c_out_wr_stb     ),
-  .write_data       (c_out_wr_data    ),
+  .write_ready      (o_cmd_out_wr_ready   ),
+  .write_activate   (i_cmd_out_wr_activate),
+  .write_fifo_size  (o_cmd_out_wr_size    ),
+  .write_strobe     (i_cmd_out_wr_stb     ),
+  .write_data       (i_cmd_out_wr_data    ),
   .starved          (                 ),
 
   //Read Size
@@ -431,14 +440,6 @@ ppfifo_2_axi_stream control_p2a (
   .o_axi_valid      (c_out_axi_valid  )
 
 );
-
-
-
-
-
-
-
-
 
 //Data FIFOs
 axi_stream_2_ppfifo data_a2p (
@@ -480,11 +481,11 @@ ppfifo #(
 
   //Read Size
   .read_clock       (clk              ),
-  .read_strobe      (d_in_rd_stb      ),
-  .read_ready       (d_in_rd_ready    ),
-  .read_activate    (d_in_rd_activate ),
-  .read_count       (d_in_rd_count    ),
-  .read_data        (d_in_rd_data     ),
+  .read_strobe      (i_data_in_rd_stb      ),
+  .read_ready       (o_data_in_rd_ready    ),
+  .read_activate    (i_data_in_rd_activate ),
+  .read_count       (o_data_in_rd_count    ),
+  .read_data        (o_data_in_rd_data     ),
   .inactive         ()
 );
 
@@ -499,11 +500,11 @@ ppfifo #(
 
   //Write Side
   .write_clock      (clk              ),
-  .write_ready      (d_out_wr_ready   ),
-  .write_activate   (d_out_wr_activate),
-  .write_fifo_size  (d_out_wr_size    ),
-  .write_strobe     (d_out_wr_stb     ),
-  .write_data       (d_out_wr_data    ),
+  .write_ready      (o_data_out_wr_ready   ),
+  .write_activate   (i_data_out_wr_activate),
+  .write_fifo_size  (o_data_out_wr_size    ),
+  .write_strobe     (i_data_out_wr_stb     ),
+  .write_data       (i_data_out_wr_data    ),
   .starved          (),
 
   //Read Size

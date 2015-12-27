@@ -156,9 +156,9 @@ localparam            F7_ID               = 7;
 
 
 //Registers/Wires
-reg           clk;
+reg           clk = 0;
 reg   [23:0]  r_usr_clk_count;
-reg           rst;
+reg           rst = 0;
 reg   [23:0]  r_usr_rst_count;
 
 reg   [23:0]  r_linkup_timeout;
@@ -176,7 +176,7 @@ assign  user_clk_out              = clk;
 assign  user_reset_out            = rst;
 
 assign  w_func_size_map[CONTROL_FUNCTION_ID ] = CONTROL_PACKET_SIZE;
-assign  w_func_size_map[DATA_FUNCTION_ID    ] = DATA_FUNCTION_SIZE;
+assign  w_func_size_map[DATA_FUNCTION_ID    ] = DATA_PACKET_SIZE;
 assign  w_func_size_map[F2_ID               ] = F2_PACKET_SIZE;
 assign  w_func_size_map[F3_ID               ] = F3_PACKET_SIZE;
 assign  w_func_size_map[F4_ID               ] = F4_PACKET_SIZE;
@@ -235,14 +235,14 @@ always @ (posedge sys_clk) begin
 end
 
 //Generate Reset Pulse
-always @ (posedge clk) begin
+always @ (posedge sys_clk or posedge sys_reset) begin
   if (sys_reset) begin
     rst               <=  1;
     r_usr_rst_count   <=  0;
   end
   else begin
-    if (r_usr_clk_count < RESET_OUT_TIMEOUT) begin
-      r_usr_clk_count <=  r_usr_clk_count + 1;
+    if (r_usr_rst_count < RESET_OUT_TIMEOUT) begin
+      r_usr_rst_count <=  r_usr_rst_count + 1;
     end
     else begin
       rst             <=  0;
@@ -322,6 +322,7 @@ always @ (posedge clk) begin
           if (r_mcount >= w_func_size_map[cfg_function_number] - 1) begin
             m_axis_rx_tlast <=  1;
           end
+          r_mcount          <=  r_mcount + 1;
         end
         else begin
           dm_state      <=  IDLE;

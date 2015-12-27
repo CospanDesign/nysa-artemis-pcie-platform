@@ -1,7 +1,7 @@
 #PUT LICENCE HERE!
 
 """
-wb_artemis_pcie_platform Driver
+ArtemisPCIE Driver
 
 """
 
@@ -27,14 +27,39 @@ except SyntaxError:
     pass
 
 #Register Constants
-CONTROL_ADDR            = 0x00000000
-ZERO_BIT                = 0
+CONTROL                         = 00
+STATUS                          = 01
+NUM_BLOCK_READ                  = 02
 
-class wb_artemis_pcie_platformDriver(driver.Driver):
 
-    """ wb_artemis_pcie_platform
 
-        Communication with a DutDriver wb_artemis_pcie_platform Core
+
+CTRL_BIT_ENABLE                 =   0
+CTRL_BIT_SEND_CONTROL_BLOCK     =   1
+CTRL_BIT_CANCEL_SEND_BLOCK      =   2
+CTRL_BIT_ENABLE_LOCAL_READ      =   3
+
+STS_BIT_PCIE_RESET              =   0
+STS_BIT_LINKUP                  =   1
+STS_BIT_RECEIVED_HOT_RESET      =   2
+STS_BITS_PCIE_LINK_STATE_LOW    =   4
+STS_BITS_PCIE_LINK_STATE_HIGH   =   6
+STS_BITS_PCIE_BUS_NUM_LOW       =   8
+STS_BITS_PCIE_BUS_NUM_HIGH      =   15
+STS_BITS_PCIE_DEV_NUM_LOW       =   16
+STS_BITS_PCIE_DEV_NUM_HIGH      =   19
+STS_BITS_PCIE_FUNC_NUM_LOW      =   20
+STS_BITS_PCIE_FUNC_NUM_HIGH     =   22
+STS_BIT_LOCAL_MEM_IDLE          =   24
+
+LOCAL_BUFFER_OFFSET             =   0x100
+
+
+class ArtemisPCIEDriver(driver.Driver):
+
+    """ ArtemisPCIE
+
+        Communication with a DutDriver ArtemisPCIE Core
     """
     @staticmethod
     def get_abi_class():
@@ -53,16 +78,74 @@ class wb_artemis_pcie_platformDriver(driver.Driver):
         return SDB_VENDOR_ID
 
     def __init__(self, nysa, urn, debug = False):
-        super(wb_artemis_pcie_platformDriver, self).__init__(nysa, urn, debug)
+        super(ArtemisPCIEDriver, self).__init__(nysa, urn, debug)
 
     def set_control(self, control):
-        self.write_register(CONTROL_ADDR, control)
+        self.write_register(CONTROL, control)
 
     def get_control(self):
-        return self.read_register(CONTROL_ADDR)
+        return self.read_register(CONTROL)
 
-    def enable_control_0_bit(self, enable):
-        self.enable_register_bit(CONTROL_ADDR, ZERO_BIT, enable)
+    def enable(self, enable):
+        self.enable_register_bit(CONTROL, CTRL_BIT_ENABLE, enable)
 
-    def is_control_0_bit_set(self):
-        return self.is_register_bit_set(CONTROL_ADDR, ZERO_BIT)
+    def is_enabled(self):
+        return self.is_register_bit_set(CONTROL, CTRL_BIT_ENABLE)
+
+    def enable_pcie_read_block(self, enable):
+        self.enable_register_bit(CONTROL, CTRL_BIT_ENABLE_LOCAL_READ, enable)
+
+    def is_pcie_read_block_enabled(self):
+        return self.is_register_bit_set(CONTROL, CTRL_BIT_ENABLE_LOCAL_READ)
+
+    def send_block_from_local_buffer(self):
+        self.set_register_bit(CONTROL, CTRL_BIT_SEND_CONTROL_BLOCK)
+
+    def cancel_block_send_from_local_buffer(self):
+        self.set_register_bit(CONTORL, CTRL_BIT_CANCEL_SEND_BLOCK)
+
+    def get_status(self):
+        return self.read_register(STATUS)
+
+    def is_pcie_reset(self):
+        return self.is_register_bit_set(STATUS, STS_BIT_PCIE_RESET)
+
+    def is_linkup(self):
+        return self.is_register_bit_set(STATUS, STS_BIT_LINKUP)
+
+    def is_hot_reset(self):
+        return self.is_register_bit_set(STATUS, STS_BIT_RECEIVED_HOT_RESET)
+
+    def get_link_state(self):
+        return self.read_register_bit_range(STATUS, STS_BITS_PCIE_LINK_STATE_HIGH, STS_BITS_PCIE_LINK_STATE_LOW)
+
+    def get_link_state_string(self, local_print = False):
+        state = self.get_link_state()
+        status = ""
+        if state == 6:
+            status = "Link State: L0"
+        elif state == 5:
+            status = "Link State: L0s"
+        elif state == 3:
+            status =  "Link State: L1"
+        elif state == 7:
+            stats = "Link state: In Transaciton"
+        else:
+            status = "Link State Unkown: 0x%02X" % state
+
+        if local_print:
+            print (status)
+
+        return status
+
+    def get_bus_num(self):
+        return self.read_register_bit_range(STATUS, STS_BITS_PCIE_BUS_NUM_HIGH, STS_BITS_PCIE_BUS_NUM_LOW)
+
+    def get_dev_num(self):
+        return self.read_register_bit_range(STATUS, STS_BITS_PCIE_DEV_NUM_HIGH, STS_BITS_PCIE_DEV_NUM_LOW)
+
+    def get_func_num(self):
+        return self.read_register_bit_range(STATUS, STS_BITS_PCIE_FUNC_NUM_HIGH, STS_BITS_PCIE_FUNC_NUM_LOW)
+
+    def is_local_mem_idle(self):
+        return self.is_register_bit_set(STATUS, STS_BIT_LOCAL_MEM_IDLE)

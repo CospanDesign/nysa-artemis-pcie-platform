@@ -8,7 +8,7 @@ from nysa.host.sim.sim_host import NysaSim
 from cocotb.clock import Clock
 import time
 from array import array as Array
-from dut_driver import wb_artemis_pcie_platformDriver
+from dut_driver import ArtemisPCIEDriver
 
 SIM_CONFIG = "sim_config.json"
 
@@ -53,12 +53,16 @@ def first_test(dut):
     nysa.read_sdb()
     yield (nysa.wait_clocks(10))
     nysa.pretty_print_sdb()
-    driver = wb_artemis_pcie_platformDriver(nysa, nysa.find_device(wb_artemis_pcie_platformDriver)[0])
-    print "here!"
-    yield cocotb.external(driver.set_control)(0x01)
-    yield (nysa.wait_clocks(100))
+    driver = ArtemisPCIEDriver(nysa, nysa.find_device(ArtemisPCIEDriver)[0])
+    yield cocotb.external(driver.enable)(True)
+    yield (nysa.wait_clocks(1000))
     v = yield cocotb.external(driver.get_control)()
+
     dut.log.info("V: %d" % v)
+
     dut.log.info("DUT Opened!")
     dut.log.info("Ready")
 
+    dut.log.info("Enable PPFIFO 2 Local Memory")
+    yield cocotb.external(driver.enable_pcie_read_block)(True)
+    yield (nysa.wait_clocks(1000))
