@@ -8,12 +8,24 @@ PYTHONPATH := ./model:$(PYTHONPATH)
 export PYTHONPATH
 export PYTHONHOME=$(shell python -c "from distutils.sysconfig import get_config_var; print(get_config_var('prefix'))")
 
-EXTRA_ARGS+=-I$(TOPDIR)/rtl/ -I$(NYSA)/verilog/
+EXTRA_ARGS+=-I$(TOPDIR)/rtl/ -I$(NYSA)/verilog/ -DSIMULATION
 
 #Dependencies
 VERILOG_SOURCES = $(NYSA)/verilog/wishbone/master/wishbone_master.v
 
+VERILOG_SOURCES += $(NYSA)/verilog/generic/blk_mem.v
 VERILOG_SOURCES += ${NYSA}/verilog/generic/bram.v
+VERILOG_SOURCES += ${NYSA}/verilog/generic/cross_clock_strobe.v
+VERILOG_SOURCES += $(NYSA)/verilog/generic/cross_clock_enable.v
+VERILOG_SOURCES += $(NYSA)/verilog/generic/ppfifo.v
+
+VERILOG_SOURCES += ${TOPDIR}/sim/sim_pcie_axi_bridge.v
+VERILOG_SOURCES += ${TOPDIR}/rtl/axi_stream_2_ppfifo.v
+VERILOG_SOURCES += ${TOPDIR}/rtl/ppfifo_2_axi_stream.v
+VERILOG_SOURCES += ${TOPDIR}/rtl/artemis_pcie_interface.v
+
+
+
 VERILOG_SOURCES += ${NYSA}/verilog/wishbone/slave/wb_bram/rtl/wb_bram.v
 VERILOG_SOURCES += $(NYSA)/verilog/sim/wishbone/interconnect/example_2port_interconnect/wishbone_interconnect.v
 VERILOG_SOURCES += ${TOPDIR}/sim/arbiter_2_masters.v
