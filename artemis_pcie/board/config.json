@@ -3,7 +3,7 @@
   "vendor":"Cospan Design",
   "host_inteface":"ft_master_interface",
   "default_constraint_files":[
-    "artemis-usb2.ucf"
+    "artemis-pcie.ucf"
     ],
   "parent_board":[
     "artemis"

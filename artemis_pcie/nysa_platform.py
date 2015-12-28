@@ -20,70 +20,67 @@
 #SOFTWARE.
 
 """
-ArtemisPCIE Interface
+Artemis PCIE Interface
 """
 __author__ = 'dave.mccoy@cospandesign.com (Dave McCoy)'
 
 import sys
 import os
-import glob
-import json
-import hashlib
-
+import subprocess
 
 from nysa.host.nysa_platform import Platform
+from nysa.host.nysa_platform import SYSTEM_NAME
+from nysa.host.nysa_platform import SYSTEM_DIST
+
+import usb.core
+import usb.util
+from ftdi import Ftdi
+
+sys.path.append(os.path.join(os.path.dirname(__file__),
+                             os.pardir,
+                             os.pardir))
+
+import nysa
 from nysa.ibuilder.lib.xilinx_utils import find_xilinx_path
 from artemis_pcie import ArtemisPCIE
 
-
 class ArtemisPCIEPlatform(Platform):
+
     def __init__(self, status = None):
         super (ArtemisPCIEPlatform, self).__init__(status)
+        self.vendor = 0x0403
+        self.product = 0x8532
 
     def get_type(self):
-        if self.status: self.status.Verbose("Returnig 'artemis_pcie' type")
         return "artemis_pcie"
 
     def scan(self):
-        """
-        Nysa will call this function when the user wants to scan for the
-        platform specific boards
-
-        Args:
-            Nothing
-
-
-        Returns:
-            Dictionary of artemis_pcie instances, where the key is the serial number
-            or unique identifier of a board
-
-        Raises:
-            NysaError: An error occured when scanning for devices
-
-        """
-        raise AssertionError("%s not implemented" % sys._getframe().f_code.co_name)
+        self.status.Verbose("Scanning")
+        devices = usb.core.find(find_all = True)
+        for device in devices:
+            if device.idVendor == self.vendor and device.idProduct == self.product:
+                self.add_device_dict(device.serial_number, ArtemisPCIE(idVendor = self.vendor,
+                                                      idProduct = self.product,
+                                                      sernum = device.serial_number,
+                                                      status = self.status))
+        return self.dev_dict
 
     def test_build_tools(self):
-        """
-        Runs a test to determine if the Vendor specific build tools are present
-
-        Args:
-            Nothing
-
-        Returns:
-            Boolean:
-                True: Build tools found
-                False: Build tools not found
-
-        Raises:
-            NysaError: An error occured when scanning for the build tools
-        """
-        raise AssertionError("%s not implemented" % sys._getframe().f_code.co_name)
-        '''
-        Although Nysa can be used with Altera the following two lines can be used
-        for determining if Xilinx is installed on this platform
-
         if find_xilinx_path() is None:
             return False
         return True
-        '''
+
+    def setup_platform(self):
+        if SYSTEM_NAME == "Linux":
+            print "linux distribution: %s" % SYSTEM_DIST[0]
+            source_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "board", "66-artemis-pcie.rules"))
+            if SYSTEM_DIST[0] == "Ubuntu":
+                print "Found Ubuntu platform, copying over rules, make sure to restart udev rules"
+                dest_path = "/etc/udev/rules.d/66-artemis-pcie.rules"
+                cmd = ["sudo", "cp", source_path, dest_path]
+                v = subprocess.call(cmd)
+
+        if SYSTEM_NAME == "Windows":
+            print "Windows box!"
+        return
+
