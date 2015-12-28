@@ -28,9 +28,9 @@ SOFTWARE.
  * Changes:
  */
 
-`define MEM_WAIT  4
+`define MEM_WAIT  2
 
-module dpb_ppfifo_bridge #(
+module adapter_dpb_ppfifo #(
   parameter       MEM_DEPTH   = 8,
   parameter       DATA_WIDTH  = 32
 )(
@@ -100,6 +100,7 @@ cross_clock_enable p_en_r (
 
 cross_clock_strobe p_stb_w (
   .rst            (rst                  ),
+  .in_clk         (clk                  ),
   .in_stb         (i_mem_2_ppfifo_stb   ),
 
   .out_clk        (ppfifo_clk           ),
@@ -108,6 +109,7 @@ cross_clock_strobe p_stb_w (
 
 cross_clock_strobe p_stb_cncl_w (
   .rst            (rst                  ),
+  .in_clk         (clk                  ),
   .in_stb         (i_cancel_write_stb   ),
 
   .out_clk        (ppfifo_clk           ),
@@ -147,6 +149,7 @@ always @ (posedge clk) begin
   else begin
     if (prev_mem_addr != i_bram_addr) begin
       mem_wait_count      <=  0;
+      prev_mem_addr       <=  i_bram_addr;
     end
     else begin
       if (mem_wait_count < `MEM_WAIT) begin
@@ -193,7 +196,7 @@ always @ (posedge ppfifo_clk) begin
         end
       end
       WRITE_SETUP: begin
-        if ((i_write_ready > 0) && (o_write_activate)) begin
+        if ((i_write_ready > 0) && !o_write_activate) begin
           if (i_write_ready[0]) begin
             o_write_activate[0]   <=  1;
           end

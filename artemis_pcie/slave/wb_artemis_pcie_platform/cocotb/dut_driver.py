@@ -30,6 +30,7 @@ except SyntaxError:
 CONTROL                         = 00
 STATUS                          = 01
 NUM_BLOCK_READ                  = 02
+LOCAL_BUFFER_SIZE               = 03
 
 
 
@@ -79,6 +80,7 @@ class ArtemisPCIEDriver(driver.Driver):
 
     def __init__(self, nysa, urn, debug = False):
         super(ArtemisPCIEDriver, self).__init__(nysa, urn, debug)
+        self.buffer_size = self.get_local_buffer_size()
 
     def set_control(self, control):
         self.write_register(CONTROL, control)
@@ -149,3 +151,45 @@ class ArtemisPCIEDriver(driver.Driver):
 
     def is_local_mem_idle(self):
         return self.is_register_bit_set(STATUS, STS_BIT_LOCAL_MEM_IDLE)
+
+    def get_local_buffer_size(self):
+        return self.read_register(LOCAL_BUFFER_SIZE)
+
+    def read_local_buffer(self, address = 0x00, size = None):
+        """
+        Read the local buffer within the core, if no size is specified
+        read the entire buffer,
+        if no address is specified read from the beginning
+
+        Args:
+            address (Integer): address of data (32-bit aligned) Default 0x00
+            size (Integer): Size of read (32-bit words) Default 512
+
+        Returns (Array of Bytes):
+            Returns the data as an array of bytes
+
+        Raises:
+            Nothing
+        """
+        if size is None:
+            size = self.buffer_size / 4
+        return self.read(address + (LOCAL_BUFFER_OFFSET), length = size)
+
+    def write_local_buffer(self, data, address = 0x00):
+        """
+        Write data to the local buffer that be used to send to the Hard Drive
+        By Default the address is set to 0x00
+
+        Args:
+            data (Array of bytes): data
+            address (Integer): Address within local buffer 0 - 511 (Default 0)
+
+        Returns:
+            Nothing
+
+        Raises:
+            Nothing
+        """
+        self.write(address + (LOCAL_BUFFER_OFFSET), data)
+
+

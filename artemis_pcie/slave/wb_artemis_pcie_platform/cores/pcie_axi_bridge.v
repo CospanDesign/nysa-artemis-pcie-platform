@@ -86,7 +86,8 @@ module pcie_axi_bridge (
   output     [15:0] cfg_lcommand,
 
   // System Interface
-  input             sys_clk,
+  input             sys_clk_p,
+  input             sys_clk_n,
   input             sys_reset,
   output            user_clk_out,
   output            user_reset_out,

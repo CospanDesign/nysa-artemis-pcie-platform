@@ -4,7 +4,7 @@ module tb_cocotb (
 
 //Virtual Host Interface Signals
 input             clk,
-input             sata_clk,
+
 input             rst,
 output            master_ready,
 input             in_ready,
@@ -39,6 +39,9 @@ reg   [27:0]      r_in_data_count;
 reg               r_out_ready;
 reg               r_ih_reset;
 
+reg               w_clk_100mhz_clk_p;
+reg               w_clk_100mhz_clk_n;
+
 
 //There is a bug in COCOTB when stiumlating a signal, sometimes it can be corrupted if not registered
 always @ (*) r_rst           = rst;
@@ -49,6 +52,9 @@ always @ (*) r_in_data       = in_data;
 always @ (*) r_in_data_count = in_data_count;
 always @ (*) r_out_ready     = out_ready;
 always @ (*) r_ih_reset      = ih_reset;
+
+always @ (*) w_clk_100mhz_clk_p      = clk;
+always @ (*) w_clk_100mhz_clk_n      = !clk;
 
 //wishbone signals
 wire              w_wbp_we;
@@ -175,6 +181,9 @@ wb_artemis_pcie_platform s1 (
 
   .clk                  (clk                  ),
   .rst                  (r_rst                ),
+
+  .clk_100mhz_gtp_p     (w_clk_100mhz_clk_p   ),
+  .clk_100mhz_gtp_n     (w_clk_100mhz_clk_n   ),
 
   .i_wbs_we             (w_wbs1_we            ),
   .i_wbs_sel            (4'b1111              ),

@@ -34,7 +34,7 @@ SOFTWARE.
  *  12/26/2015: Initial Checkin
  */
 
-module axi_stream_2_ppfifo (
+module adapter_axi_stream_2_ppfifo (
   input                     rst,
 
   //AXI Stream Input

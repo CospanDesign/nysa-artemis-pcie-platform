@@ -103,9 +103,10 @@ module wb_artemis_pcie_platform #(
   //This interrupt can be controlled from this module or a submodule
   output  reg         o_wbs_int,
 
-
-
   //PCIE Physical Signals
+  input               clk_100mhz_gtp_p,
+  input               clk_100mhz_gtp_n,
+
   output              pci_exp_txp,
   output              pci_exp_txn,
   input               pci_exp_rxp,
@@ -118,6 +119,7 @@ localparam    CONTROL_BUFFER_SIZE = 2 ** CONTROL_FIFO_DEPTH;
 localparam    CONTROL             = 00;
 localparam    STATUS              = 01;
 localparam    NUM_BLOCK_READ      = 02;
+localparam    LOCAL_BUFFER_SIZE   = 03;
 
 //Local Registers/Wires
 
@@ -237,6 +239,9 @@ artemis_pcie_interface #(
 )api (
   .clk                            (clk                    ),
   .rst                            (rst || !r_enable_pcie  ),
+
+  .gtp_clk_p                      (clk_100mhz_gtp_p       ),
+  .gtp_clk_n                      (clk_100mhz_gtp_n       ),
   .pci_exp_txp                    (pci_exp_txp            ),
   .pci_exp_txn                    (pci_exp_txn            ),
   .pci_exp_rxp                    (pci_exp_rxp            ),
@@ -329,7 +334,7 @@ artemis_pcie_interface #(
 
 );
 
-dpb_ppfifo_bridge #(
+adapter_dpb_ppfifo #(
   .MEM_DEPTH                          (CONTROL_FIFO_DEPTH     ),
   .DATA_WIDTH                         (32                     )
 )dpb_bridge (
@@ -415,6 +420,9 @@ always @ (posedge clk) begin
     o_wbs_int                   <=  0;
     r_ppfifo_2_mem_en           <=  0;
     r_enable_pcie               <=  0;
+
+    r_lcl_mem_din               <=  0;
+
   end
 
   else begin
@@ -451,6 +459,7 @@ always @ (posedge clk) begin
               end
             end
           endcase
+          o_wbs_ack <= 1;
         end
         else begin
           //read request
@@ -473,6 +482,9 @@ always @ (posedge clk) begin
             NUM_BLOCK_READ: begin
               o_wbs_dat <= w_num_reads;
             end
+            LOCAL_BUFFER_SIZE: begin
+              o_wbs_dat <= CONTROL_BUFFER_SIZE;
+            end
             //add as many ADDR_X you need here
             default: begin
               if (w_lcl_mem_en) begin
@@ -480,8 +492,10 @@ always @ (posedge clk) begin
               end
             end
           endcase
+          if (w_lcl_mem_valid) begin
+            o_wbs_ack <= 1;
+          end
         end
-      o_wbs_ack <= 1;
       end
     end
   end

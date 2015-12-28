@@ -21,9 +21,9 @@ VERILOG_SOURCES += $(NYSA)/verilog/generic/cross_clock_enable.v
 VERILOG_SOURCES += $(NYSA)/verilog/generic/ppfifo.v
 
 VERILOG_SOURCES += ${TOPDIR}/sim/sim_pcie_axi_bridge.v
-VERILOG_SOURCES += ${TOPDIR}/rtl/dpb_ppfifo_bridge.v
-VERILOG_SOURCES += ${TOPDIR}/rtl/axi_stream_2_ppfifo.v
-VERILOG_SOURCES += ${TOPDIR}/rtl/ppfifo_2_axi_stream.v
+VERILOG_SOURCES += ${TOPDIR}/rtl/adapter_dpb_ppfifo.v
+VERILOG_SOURCES += ${TOPDIR}/rtl/adapter_axi_stream_2_ppfifo.v
+VERILOG_SOURCES += ${TOPDIR}/rtl/adapter_ppfifo_2_axi_stream.v
 VERILOG_SOURCES += ${TOPDIR}/rtl/artemis_pcie_interface.v
 
 

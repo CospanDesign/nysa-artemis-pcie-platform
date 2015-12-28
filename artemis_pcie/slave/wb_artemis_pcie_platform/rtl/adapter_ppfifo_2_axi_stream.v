@@ -28,7 +28,7 @@ SOFTWARE.
  * Changes:
  */
 
-module ppfifo_2_axi_stream (
+module adapter_ppfifo_2_axi_stream (
   input                     rst,
 
   //Ping Poing FIFO Read Interface

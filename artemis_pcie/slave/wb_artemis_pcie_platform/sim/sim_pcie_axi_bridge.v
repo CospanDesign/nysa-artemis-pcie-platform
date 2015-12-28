@@ -122,7 +122,8 @@ module sim_pcie_axi_bridge #(
   output      [15:0]  cfg_lcommand,
 
   // System Interface
-  input               sys_clk,
+  input               sys_clk_p,
+  input               sys_clk_n,
   input               sys_reset,
   output              user_clk_out,
   output              user_reset_out,
@@ -219,7 +220,7 @@ assign  cfg_lcommand              = 0;
 
 //Synchronous Logic
 //Generate clock
-always @ (posedge sys_clk) begin
+always @ (posedge sys_clk_p) begin
   if (sys_reset) begin
     clk               <=  0;
     r_usr_clk_count   <=  0;
@@ -235,7 +236,7 @@ always @ (posedge sys_clk) begin
 end
 
 //Generate Reset Pulse
-always @ (posedge sys_clk or posedge sys_reset) begin
+always @ (posedge sys_clk_p or posedge sys_reset) begin
   if (sys_reset) begin
     rst               <=  1;
     r_usr_rst_count   <=  0;

@@ -39,6 +39,9 @@ module artemis_pcie_interface #(
   //The Following Signals are clocked at 62.5MHz
 
   // PCI Express Fabric Interface
+  input                     gtp_clk_p,
+  input                     gtp_clk_n,
+
   output                    pci_exp_txp,
   output                    pci_exp_txn,
   input                     pci_exp_rxp,
@@ -222,9 +225,7 @@ wire                        cfg_trn_pending;
 
 
 
-
 //submodules
-
 cross_clock_strobe trn_pnd(
   .in_clk           (clk                ),
   .in_stb           (cfg_trn_pending_stb),
@@ -239,10 +240,7 @@ cross_clock_strobe trn_pnd(
 sim_pcie_axi_bridge #(
   .USR_CLK_DIVIDE                     (4                      )
 )pcie_interface(
-
-
 `else
-
 pcie_axi_bridge pcie_interface(
 
 `endif
@@ -337,14 +335,15 @@ pcie_axi_bridge pcie_interface(
   .cfg_lcommand                      (cfg_lcommand            ),
 
   // System Interface
-  .sys_clk                           (clk                     ),
+  .sys_clk_p                         (gtp_clk_p               ),
+  .sys_clk_n                         (gtp_clk_n               ),
   .sys_reset                         (rst                     ),
   .user_clk_out                      (clk_62p5                ),
   .user_reset_out                    (pcie_reset              ),
   .received_hot_reset                (received_hot_reset      )
 );
 
-axi_stream_2_ppfifo cntrl_a2p (
+adapter_axi_stream_2_ppfifo cntrl_a2p (
   .rst              (pcie_reset       ),
 
   //AXI Stream Input
@@ -367,7 +366,7 @@ axi_stream_2_ppfifo cntrl_a2p (
 
 ppfifo #(
   .DATA_WIDTH       (32               ),
-  .ADDRESS_WIDTH    (CONTROL_FIFO_DEPTH)
+  .ADDRESS_WIDTH    (CONTROL_FIFO_DEPTH - 2)
 ) pcie_control_ingress (
 
   //Control Signals
@@ -394,7 +393,7 @@ ppfifo #(
 
 ppfifo #(
   .DATA_WIDTH       (32               ),
-  .ADDRESS_WIDTH    (CONTROL_FIFO_DEPTH)
+  .ADDRESS_WIDTH    (CONTROL_FIFO_DEPTH - 2)
 ) pcie_control_egress (
 
   //Control Signals
@@ -420,7 +419,7 @@ ppfifo #(
 );
 
 
-ppfifo_2_axi_stream control_p2a (
+adapter_ppfifo_2_axi_stream control_p2a (
   .rst              (pcie_reset       ),
 
   //Ping Poing FIFO Read Interface
@@ -442,7 +441,7 @@ ppfifo_2_axi_stream control_p2a (
 );
 
 //Data FIFOs
-axi_stream_2_ppfifo data_a2p (
+adapter_axi_stream_2_ppfifo data_a2p (
   .rst              (pcie_reset       ),
 
   //AXI Stream Input
@@ -464,7 +463,7 @@ axi_stream_2_ppfifo data_a2p (
 
 ppfifo #(
   .DATA_WIDTH       (32               ),
-  .ADDRESS_WIDTH    (DATA_FIFO_DEPTH  )
+  .ADDRESS_WIDTH    (DATA_FIFO_DEPTH - 2 )
 ) pcie_data_ingress (
 
   //Control Signals
@@ -492,7 +491,7 @@ ppfifo #(
 
 ppfifo #(
   .DATA_WIDTH       (32               ),
-  .ADDRESS_WIDTH    (DATA_FIFO_DEPTH  )
+  .ADDRESS_WIDTH    (DATA_FIFO_DEPTH - 2 )
 ) pcie_data_egress (
 
   //Control Signals
@@ -517,7 +516,7 @@ ppfifo #(
   .inactive         ()
 );
 
-ppfifo_2_axi_stream data_p2a (
+adapter_ppfifo_2_axi_stream data_p2a (
   .rst              (pcie_reset       ),
 
   //Ping Poing FIFO Read Interface
