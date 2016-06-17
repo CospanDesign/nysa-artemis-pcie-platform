@@ -27,34 +27,44 @@ except SyntaxError:
     pass
 
 #Register Constants
-CONTROL                         = 00
-STATUS                          = 01
-NUM_BLOCK_READ                  = 02
-LOCAL_BUFFER_SIZE               = 03
+CONTROL                         = 0x000
+STATUS                          = 0x001
+CFG_READ_EXEC                   = 0x002
+CFG_SM_STATE                    = 0x003
+CTR_SM_STATE                    = 0x004
+INGRESS_COUNT                   = 0x005
+INGRESS_STATE                   = 0x006
+INGRESS_RI_COUNT                = 0x007
+INGRESS_CI_COUNT                = 0x008
+INGRESS_ADDR                    = 0x009
+INGRESS_CMPLT_COUNT             = 0x00A
+IH_STATE                        = 0x00B
+OH_STATE                        = 0x00C
+BRAM_NUM_READS                  = 0x00D
+LOCAL_BUFFER_SIZE               = 0x00E
+DBG_ID_VALUE                    = 0x00F
+DBG_COMMAND_VALUE               = 0x010
+DBG_COUNT_VALUE                 = 0x011
+DBG_ADDRESS_VALUE               = 0x012
+
+CTRL_BIT_SOURCE_EN              = 0
+CTRL_BIT_CANCEL_WRITE           = 1
+CTRL_BIT_SINK_EN                = 2
 
 
 
+STS_BIT_LINKUP                  =  0
+STS_BIT_READ_IDLE               =  1
+STS_PER_FIFO_SEL                =  2
+STS_MEM_FIFO_SEL                =  3
+STS_DMA_FIFO_SEL                =  4
+STS_WRITE_EN                    =  5
+STS_READ_EN                     =  6
 
-CTRL_BIT_ENABLE                 =   0
-CTRL_BIT_SEND_CONTROL_BLOCK     =   1
-CTRL_BIT_CANCEL_SEND_BLOCK      =   2
-CTRL_BIT_ENABLE_LOCAL_READ      =   3
 
-STS_BIT_PCIE_RESET              =   0
-STS_BIT_LINKUP                  =   1
-STS_BIT_RECEIVED_HOT_RESET      =   2
-STS_BITS_PCIE_LINK_STATE_LOW    =   4
-STS_BITS_PCIE_LINK_STATE_HIGH   =   6
-STS_BITS_PCIE_BUS_NUM_LOW       =   8
-STS_BITS_PCIE_BUS_NUM_HIGH      =   15
-STS_BITS_PCIE_DEV_NUM_LOW       =   16
-STS_BITS_PCIE_DEV_NUM_HIGH      =   19
-STS_BITS_PCIE_FUNC_NUM_LOW      =   20
-STS_BITS_PCIE_FUNC_NUM_HIGH     =   22
-STS_BIT_LOCAL_MEM_IDLE          =   24
+
 
 LOCAL_BUFFER_OFFSET             =   0x100
-
 
 class ArtemisPCIEDriver(driver.Driver):
 
@@ -80,7 +90,7 @@ class ArtemisPCIEDriver(driver.Driver):
 
     def __init__(self, nysa, urn, debug = False):
         super(ArtemisPCIEDriver, self).__init__(nysa, urn, debug)
-        self.buffer_size = self.get_local_buffer_size()
+        self.buffer_size = None
 
     def set_control(self, control):
         self.write_register(CONTROL, control)
@@ -88,69 +98,38 @@ class ArtemisPCIEDriver(driver.Driver):
     def get_control(self):
         return self.read_register(CONTROL)
 
-    def enable(self, enable):
-        self.enable_register_bit(CONTROL, CTRL_BIT_ENABLE, enable)
+    def get_config_state(self):
+        return self.read_register(CFG_SM_STATE)
 
-    def is_enabled(self):
-        return self.is_register_bit_set(CONTROL, CTRL_BIT_ENABLE)
+    def get_control_state(self):
+        return self.read_register(CTR_SM_STATE)
 
-    def enable_pcie_read_block(self, enable):
-        self.enable_register_bit(CONTROL, CTRL_BIT_ENABLE_LOCAL_READ, enable)
+    def get_config_state_read_count(self):
+        return self.read_register(CFG_READ_EXEC)
 
-    def is_pcie_read_block_enabled(self):
-        return self.is_register_bit_set(CONTROL, CTRL_BIT_ENABLE_LOCAL_READ)
+    def get_ingress_state(self):
+        return self.read_register(INGRESS_STATE)
 
-    def send_block_from_local_buffer(self):
-        self.set_register_bit(CONTROL, CTRL_BIT_SEND_CONTROL_BLOCK)
+    def get_ingress_count(self):
+        return self.read_register(INGRESS_COUNT)
 
-    def cancel_block_send_from_local_buffer(self):
-        self.set_register_bit(CONTORL, CTRL_BIT_CANCEL_SEND_BLOCK)
+    def get_ingress_ri_count(self):
+        return self.read_register(INGRESS_RI_COUNT)
 
-    def get_status(self):
-        return self.read_register(STATUS)
+    def get_ingress_ci_count(self):
+        return self.read_register(INGRESS_CI_COUNT)
 
-    def is_pcie_reset(self):
-        return self.is_register_bit_set(STATUS, STS_BIT_PCIE_RESET)
+    def get_ingress_cmplt_count(self):
+        return self.read_register(INGRESS_CMPLT_COUNT)
 
-    def is_linkup(self):
-        return self.is_register_bit_set(STATUS, STS_BIT_LINKUP)
+    def get_ingress_addr(self):
+        return self.read_register(INGRESS_ADDR)
 
-    def is_hot_reset(self):
-        return self.is_register_bit_set(STATUS, STS_BIT_RECEIVED_HOT_RESET)
+    def get_ih_state(self):
+        return self.read_register(IH_STATE)
 
-    def get_link_state(self):
-        return self.read_register_bit_range(STATUS, STS_BITS_PCIE_LINK_STATE_HIGH, STS_BITS_PCIE_LINK_STATE_LOW)
-
-    def get_link_state_string(self, local_print = False):
-        state = self.get_link_state()
-        status = ""
-        if state == 6:
-            status = "Link State: L0"
-        elif state == 5:
-            status = "Link State: L0s"
-        elif state == 3:
-            status =  "Link State: L1"
-        elif state == 7:
-            stats = "Link state: In Transaciton"
-        else:
-            status = "Link State Unkown: 0x%02X" % state
-
-        if local_print:
-            print (status)
-
-        return status
-
-    def get_bus_num(self):
-        return self.read_register_bit_range(STATUS, STS_BITS_PCIE_BUS_NUM_HIGH, STS_BITS_PCIE_BUS_NUM_LOW)
-
-    def get_dev_num(self):
-        return self.read_register_bit_range(STATUS, STS_BITS_PCIE_DEV_NUM_HIGH, STS_BITS_PCIE_DEV_NUM_LOW)
-
-    def get_func_num(self):
-        return self.read_register_bit_range(STATUS, STS_BITS_PCIE_FUNC_NUM_HIGH, STS_BITS_PCIE_FUNC_NUM_LOW)
-
-    def is_local_mem_idle(self):
-        return self.is_register_bit_set(STATUS, STS_BIT_LOCAL_MEM_IDLE)
+    def get_oh_state(self):
+        return self.read_register(OH_STATE)
 
     def get_local_buffer_size(self):
         return self.read_register(LOCAL_BUFFER_SIZE)
@@ -172,7 +151,9 @@ class ArtemisPCIEDriver(driver.Driver):
             Nothing
         """
         if size is None:
-            size = self.buffer_size / 4
+            if self.buffer_size is None:
+                self.buffer_size = self.get_local_buffer_size()
+            size = self.buffer_size
         return self.read(address + (LOCAL_BUFFER_OFFSET), length = size)
 
     def write_local_buffer(self, data, address = 0x00):
@@ -191,5 +172,46 @@ class ArtemisPCIEDriver(driver.Driver):
             Nothing
         """
         self.write(address + (LOCAL_BUFFER_OFFSET), data)
+
+    def get_dbg_id_value(self):
+        return self.read_register(DBG_ID_VALUE)
+
+    def get_dbg_command_value(self):
+        return self.read_register(DBG_COMMAND_VALUE)
+
+    def get_dbg_count_value(self):
+        return self.read_register(DBG_COUNT_VALUE)
+
+    def get_dbg_address_value(self):
+        return self.read_register(DBG_ADDRESS_VALUE)
+
+    def is_link_up(self):
+        return self.is_register_bit_set(STATUS, STS_BIT_LINKUP)
+
+    def is_read_idle(self):
+        return self.is_register_bit_set(STATUS, STS_BIT_READ_IDLE)
+
+    def is_peripheral_bus_selected(self):
+        return self.is_register_bit_set(STATUS, STS_PER_FIFO_SEL)
+
+    def is_memory_bus_selected(self):
+        return self.is_register_bit_set(STATUS, STS_MEM_FIFO_SEL)
+
+    def is_dma_bus_selected(self):
+        return self.is_register_bit_set(STATUS, STS_DMA_FIFO_SEL)
+
+    def generate_dma_data(self):
+        self.enable_register_bit(CONTROL, CTRL_BIT_SOURCE_EN, True)
+
+    def is_write_enabled(self):
+        return self.is_register_bit_set(STATUS, STS_WRITE_EN)
+
+    def is_read_enabled(self):
+        return self.is_register_bit_set(STATUS, STS_READ_EN)
+
+
+
+
+
 
 

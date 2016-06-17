@@ -1,7 +1,30 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <testsuites name="results">
   <testsuite name="all" package="all" tests="0">
-    <testcase classname="test_dut" name="test_local_buffer" time="0.7070407867431641" />
-    <testcase classname="test_dut" name="test_local_buffer_to_pcie" time="0.6569161415100098" />
+    <testcase classname="test_dut" name="test_simple_nysa_mem_read_command" time="0.0">
+      <skipped />
+    </testcase>
+    <testcase classname="test_dut" name="test_long_nysa_dma_write_command" time="0.0">
+      <skipped />
+    </testcase>
+    <testcase classname="test_dut" name="test_simple_nysa_write_err_command" time="0.0">
+      <skipped />
+    </testcase>
+    <testcase classname="test_dut" name="test_short_nysa_mem_write_command" time="0.0">
+      <skipped />
+    </testcase>
+    <testcase classname="test_dut" name="test_simple_nysa_read_command" time="0.0">
+      <skipped />
+    </testcase>
+    <testcase classname="test_dut" name="test_short_nysa_dma_write_command" time="0.0">
+      <skipped />
+    </testcase>
+    <testcase classname="test_dut" name="test_long_nysa_read_command" time="0.0">
+      <skipped />
+    </testcase>
+    <testcase classname="test_dut" name="test_long_nysa_write_command" time="0.0">
+      <skipped />
+    </testcase>
+    <testcase classname="test_dut" name="test_simple_nysa_write_command" time="0.6342630386352539" />
   </testsuite>
 </testsuites>

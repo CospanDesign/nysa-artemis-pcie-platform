@@ -32,104 +32,156 @@ SOFTWARE.
 
 
 module sim_pcie_axi_bridge #(
-  parameter USR_CLK_DIVIDE      = 4
+  parameter PCIE_BUS_NUM                              = 8'h55,
+  parameter PCIE_DEV_NUM                              = 5'hA,
+  parameter PCIE_FUN_NUM                              = 3'h2,
+
+  parameter USR_CLK_DIVIDE                            = 4,
+
+  parameter   [6:0] VC0_TOTAL_CREDITS_PH              = 32,
+  parameter  [10:0] VC0_TOTAL_CREDITS_PD              = 211,
+  parameter   [6:0] VC0_TOTAL_CREDITS_NPH             = 8,
+  parameter   [6:0] VC0_TOTAL_CREDITS_CH              = 40,
+  //parameter   [6:0] VC0_TOTAL_CREDITS_CH              = 9,
+  parameter  [10:0] VC0_TOTAL_CREDITS_CD              = 211
 )(
 
   // PCI Express Fabric Interface
-  output              pci_exp_txp,
-  output              pci_exp_txn,
-  input               pci_exp_rxp,
-  input               pci_exp_rxn,
+  output                    pci_exp_txp,  //Not Applicable
+  output                    pci_exp_txn,  //Not Applicable
+  input                     pci_exp_rxp,  //Not Applicable
+  input                     pci_exp_rxn,  //Not Applicable
 
   // Transaction (TRN) Interface
-  output  reg         user_lnk_up,
+  output  reg               user_lnk_up,  //Finished
 
   // Tx
-  output  reg         s_axis_tx_tready,
-  input       [31:0]  s_axis_tx_tdata,
-  input       [3:0]   s_axis_tx_tkeep,
-  input       [3:0]   s_axis_tx_tuser,
-  input               s_axis_tx_tlast,
-  input               s_axis_tx_tvalid,
+  output  reg               s_axis_tx_tready, //SIM: Not Finished
+  input       [31:0]        s_axis_tx_tdata,  //SIM: Not Finished
+  input       [3:0]         s_axis_tx_tkeep,  //SIM: Not Finished
+  input       [3:0]         s_axis_tx_tuser,  //SIM: Not Finished
+  input                     s_axis_tx_tlast,  //SIM: Not Finished
+  input                     s_axis_tx_tvalid, //SIM: Not Finished
 
-  output  reg [5:0]   tx_buf_av,
-  output  reg         tx_err_drop,
-  input               tx_cfg_gnt,
-  output  reg         tx_cfg_req,
+  output  reg [5:0]         tx_buf_av,
+  output  reg               tx_err_drop,
+  input                     tx_cfg_gnt,
+  output  reg               tx_cfg_req,
+
+  output  reg               user_enable_comm, //SIM: Not Finished
 
   // Rx
-  output  reg [31:0]  m_axis_rx_tdata,
-  output  reg [3:0]   m_axis_rx_tkeep,
-  output  reg         m_axis_rx_tlast,
-  output  reg         m_axis_rx_tvalid,
-  input               m_axis_rx_tready,
-  output  reg [21:0]  m_axis_rx_tuser,
-  input               rx_np_ok,
+  output  reg [31:0]        m_axis_rx_tdata = 32'h00000000,
+  output  reg [3:0]         m_axis_rx_tkeep = 4'b1111,
+  output  reg               m_axis_rx_tlast = 1'b0,
+  output  reg               m_axis_rx_tvalid = 1'b0,
+  input                     m_axis_rx_tready,
+  output      [21:0]        m_axis_rx_tuser,
+  input                     rx_np_ok,         //SIM: Not Finished
 
   // Flow Control
-  input       [2:0]   fc_sel,
-  output      [7:0]   fc_nph,
-  output      [11:0]  fc_npd,
-  output      [7:0]   fc_ph,
-  output      [11:0]  fc_pd,
-  output      [7:0]   fc_cplh,
-  output      [11:0]  fc_cpld,
+  input       [2:0]         fc_sel,
+  output      [7:0]         fc_nph,
+  output      [11:0]        fc_npd,
+  output      [7:0]         fc_ph,
+  output      [11:0]        fc_pd,
+  output      [7:0]         fc_cplh,
+  output      [11:0]        fc_cpld,
 
   // Host (CFG) Interface
-  output      [31:0]  cfg_do,
-  output              cfg_rd_wr_done,
-  input       [9:0]   cfg_dwaddr,
-  input               cfg_rd_en,
+  output  reg [31:0]        cfg_do,           //SIM: Finished
+  output  reg               cfg_rd_wr_done,   //SIM: Finished
+  input       [9:0]         cfg_dwaddr,       //SIM: Finished
+  input                     cfg_rd_en,        //SIM: Finished
 
   // Configuration: Error
-  input               cfg_err_ur,
-  input               cfg_err_cor,
-  input               cfg_err_ecrc,
-  input               cfg_err_cpl_timeout,
-  input               cfg_err_cpl_abort,
-  input               cfg_err_posted,
-  input               cfg_err_locked,
-  input      [47:0]   cfg_err_tlp_cpl_header,
-  output              cfg_err_cpl_rdy,
+  input                     cfg_err_ur,
+  input                     cfg_err_cor,
+  input                     cfg_err_ecrc,
+  input                     cfg_err_cpl_timeout,
+  input                     cfg_err_cpl_abort,
+  input                     cfg_err_posted,
+  input                     cfg_err_locked,
+  input      [47:0]         cfg_err_tlp_cpl_header,
+  output                    cfg_err_cpl_rdy,
 
   // Conifguration: Interrupt
-  input               cfg_interrupt,
-  output              cfg_interrupt_rdy,
-  input               cfg_interrupt_assert,
-  output      [7:0]   cfg_interrupt_do,
-  input       [7:0]   cfg_interrupt_di,
-  output      [2:0]   cfg_interrupt_mmenable,
-  output              cfg_interrupt_msienable,
+  input                     cfg_interrupt,
+  output  reg               cfg_interrupt_rdy = 1,
+  input                     cfg_interrupt_assert,
+  output  reg [7:0]         cfg_interrupt_do  = 0,
+  input       [7:0]         cfg_interrupt_di,
+  output  reg [2:0]         cfg_interrupt_mmenable = 0,
+  output  reg               cfg_interrupt_msienable = 0,
 
   // Configuration: Power Management
-  input               cfg_turnoff_ok,
-  output              cfg_to_turnoff,
-  input               cfg_pm_wake,
+  input                     cfg_turnoff_ok,       //Not Applicable
+  output                    cfg_to_turnoff,       //Not Applicable
+  input                     cfg_pm_wake,          //Not Applicable
 
+  //Core Controller
   // Configuration: System/Status
-  output      [2:0]   cfg_pcie_link_state,
-  input               cfg_trn_pending,
-  input       [63:0]  cfg_dsn,
-  output      [7:0]   cfg_bus_number,
-  output      [4:0]   cfg_device_number,
-  output  reg [2:0]   cfg_function_number,
+  output      [2:0]         cfg_pcie_link_state,  //Not Applicable
+  input                     cfg_trn_pending,
+  input       [63:0]        cfg_dsn,
+  output      [7:0]         cfg_bus_number,
+  output      [4:0]         cfg_device_number,
+  output      [2:0]         cfg_function_number,
 
-  output      [15:0]  cfg_status,
-  output      [15:0]  cfg_command,
-  output      [15:0]  cfg_dstatus,
-  output      [15:0]  cfg_dcommand,
-  output      [15:0]  cfg_lstatus,
-  output      [15:0]  cfg_lcommand,
+  output      [15:0]        cfg_status,
+  output      [15:0]        cfg_command,
+  output      [15:0]        cfg_dstatus,
+  output      [15:0]        cfg_dcommand,
+  output      [15:0]        cfg_lstatus,
+  output      [15:0]        cfg_lcommand,
 
   // System Interface
-  input               sys_clk_p,
-  input               sys_clk_n,
-  input               sys_reset,
-  output              user_clk_out,
-  output              user_reset_out,
-  output              received_hot_reset
+  input                     sys_clk_p,
+  input                     sys_clk_n,
+  input                     sys_reset,
+  output                    user_clk_out,
+  output                    user_reset_out,
+  output                    received_hot_reset,
 
+  // Not Finished
+  output                    pll_lock_detect,
+  output                    gtp_pll_lock_detect,
+  output                    gtp_reset_done,
+  output      [4:0]         cfg_ltssm_state,
+  input       [1:0]         rx_equalizer_ctrl,
+  input       [3:0]         tx_diff_ctrl,
+  input       [2:0]         tx_pre_emphasis,
+  output      [6:0]         o_bar_hit,
+
+  output                    dbg_reg_detected_correctable, //Not Applicable
+  output                    dbg_reg_detected_fatal,       //Not Applicable
+  output                    dbg_reg_detected_non_fatal,   //Not Applicable
+  output                    dbg_reg_detected_unsupported, //Not Applicable
+
+  output                    dbg_bad_dllp_status,          //Not Applicable
+  output                    dbg_bad_tlp_lcrc,             //Not Applicable
+  output                    dbg_bad_tlp_seq_num,          //Not Applicable
+  output                    dbg_bad_tlp_status,           //Not Applicable
+  output                    dbg_dl_protocol_status,       //Not Applicable
+  output                    dbg_fc_protocol_err_status,   //Not Applicable
+  output                    dbg_mlfrmd_length,            //Not Applicable
+  output                    dbg_mlfrmd_mps,               //Not Applicable
+  output                    dbg_mlfrmd_tcvc,              //Not Applicable
+  output                    dbg_mlfrmd_tlp_status,        //Not Applicable
+  output                    dbg_mlfrmd_unrec_type,        //Not Applicable
+  output                    dbg_poistlpstatus,            //Not Applicable
+  output                    dbg_rcvr_overflow_status,     //Not Applicable
+  output                    dbg_rply_rollover_status,     //Not Applicable
+  output                    dbg_rply_timeout_status,      //Not Applicable
+  output                    dbg_ur_no_bar_hit,            //Not Applicable
+  output                    dbg_ur_pois_cfg_wr,           //Not Applicable
+  output                    dbg_ur_status,                //Not Applicable
+  output                    dbg_ur_unsup_msg,             //Not Applicable
+
+  output                    rx_elec_idle
 );
+
+assign                pll_lock_detect = 1'b1;
 
 //Local Parameters
 localparam            RESET_OUT_TIMEOUT   = 32'h00000010;
@@ -168,13 +220,15 @@ reg   [23:0]  r_mcount;
 reg   [23:0]  r_scount;
 wire  [23:0]  w_func_size_map [0:7];
 
+wire  [23:0]  w_func_size;
+
 //Submodules
 //Asynchronous Logic
 assign  pcie_exp_txp              = 0;
 assign  pcie_exp_txn              = 0;
 
-assign  user_clk_out              = clk;
-assign  user_reset_out            = rst;
+//assign  user_clk_out              = clk;
+//assign  user_reset_out            = rst;
 
 assign  w_func_size_map[CONTROL_FUNCTION_ID ] = CONTROL_PACKET_SIZE;
 assign  w_func_size_map[DATA_FUNCTION_ID    ] = DATA_PACKET_SIZE;
@@ -185,31 +239,31 @@ assign  w_func_size_map[F5_ID               ] = F5_PACKET_SIZE;
 assign  w_func_size_map[F6_ID               ] = F6_PACKET_SIZE;
 assign  w_func_size_map[F7_ID               ] = F7_PACKET_SIZE;
 
+assign  w_func_size               = w_func_size_map[cfg_function_number];
+
 //TODO
 assign  received_hot_reset        = 0;
 
-assign  fc_nph                    = 0;
-assign  fc_npd                    = 0;
-assign  fc_ph                     = 0;
-assign  fc_pd                     = 0;
-assign  fc_cplh                   = 0;
-assign  fc_cpld                   = 0;
+//  input       [2:0]         fc_sel,
+assign  fc_nph      = VC0_TOTAL_CREDITS_NPH;
+assign  fc_npd      = 10;
+assign  fc_ph       = VC0_TOTAL_CREDITS_PH;
+assign  fc_pd       = 100;
+assign  fc_cplh     = VC0_TOTAL_CREDITS_CH;
+assign  fc_cpld     = VC0_TOTAL_CREDITS_CD;
 
-assign  cfg_do                    = 0;
-assign  cfg_rd_wr_done            = 0;
+
 
 assign  cfg_err_cpl_rdy           = 0;
 
-assign  cfg_interrupt_rdy         = 0;
-assign  cfg_interrupt_do          = 0;
-assign  cfg_interrupt_mmenable    = 0;
-assign  cfg_interrupt_msienable   = 0;
+//assign  cfg_interrupt_rdy         = 0;
+//assign  cfg_interrupt_do          = 0;
+//assign  cfg_interrupt_mmenable    = 0;
+//assign  cfg_interrupt_msienable   = 0;
 
 assign  cfg_to_turnoff            = 0;
 
 assign  cfg_pcie_link_state       = 0;
-assign  cfg_bus_number            = 0;
-assign  cfg_device_number         = 0;
 
 assign  cfg_status                = 0;
 assign  cfg_command               = 0;
@@ -268,17 +322,6 @@ always @ (posedge clk) begin
 end
 
 
-//Leave the cfg_function_number available for cocotb to modify in python
-always @ (posedge clk) begin
-  if (rst) begin
-    cfg_function_number <=  0;
-  end
-  else begin
-  end
-end
-
-
-
 //Data From PCIE to Core Ggenerator
 reg [3:0] dm_state;
 
@@ -287,6 +330,22 @@ localparam  READY   = 1;
 localparam  WRITE   = 2;
 localparam  READ    = 3;
 
+
+assign  o_bar_hit = 7'h01;
+
+assign  m_axis_rx_tuser   =  {13'h0,
+                              o_bar_hit,
+                              m_axis_rx_tvalid,
+                              1'b0};
+
+assign  cfg_bus_number      = PCIE_BUS_NUM;
+assign  cfg_function_number = PCIE_FUN_NUM;
+assign  cfg_device_number   = PCIE_DEV_NUM;
+
+always @ (posedge clk) begin
+  m_axis_rx_tkeep   <=  4'b1111;
+end
+/*
 always @ (posedge clk) begin
   m_axis_rx_tlast     <=  0;
   m_axis_rx_tvalid    <=  0;
@@ -296,7 +355,6 @@ always @ (posedge clk) begin
     dm_state          <=  IDLE;
 
     m_axis_rx_tkeep   <=  4'b1111;
-    m_axis_rx_tuser   <=  0;
 
     r_mcount          <=  0;
   end
@@ -311,22 +369,22 @@ always @ (posedge clk) begin
       end
       READY: begin
         if (m_axis_rx_tready) begin
-          dm_state    <=  WRITE;
+          dm_state          <=  WRITE;
         end
       end
       WRITE: begin
         if (m_axis_rx_tvalid) begin
           m_axis_rx_tdata   <=  m_axis_rx_tdata + 1;
         end
-        if (m_axis_rx_tready && (r_mcount < w_func_size_map[cfg_function_number])) begin
+        if (r_mcount < w_func_size_map[cfg_function_number]) begin
           m_axis_rx_tvalid  <=  1;
-          if (r_mcount >= w_func_size_map[cfg_function_number] - 1) begin
+          if (r_mcount >= (w_func_size_map[cfg_function_number] - 1)) begin
             m_axis_rx_tlast <=  1;
           end
           r_mcount          <=  r_mcount + 1;
         end
         else begin
-          dm_state      <=  IDLE;
+          dm_state          <=  IDLE;
         end
       end
       default: begin
@@ -334,11 +392,58 @@ always @ (posedge clk) begin
     endcase
   end
 end
+*/
+
+//Linkup
+reg prev_user_lnk_up;
+reg [3:0] linkup_count;
+
+always @ (posedge clk) begin
+  user_enable_comm    <=  0;
+  if (rst || !user_lnk_up) begin
+    linkup_count      <=  0;
+  end
+  else begin
+    if (linkup_count < 4'hF) begin
+      linkup_count    <=  linkup_count + 1;
+    end
+
+    if (linkup_count == 4'hE) begin
+      user_enable_comm  <=  1;
+    end
+  end
+end
+
+//Configuration Read
+always @ (posedge clk) begin
+  cfg_rd_wr_done    <=  0;
+  if (rst) begin
+    cfg_do          <=  0;
+  end
+  else begin
+    if (cfg_rd_en) begin
+      cfg_rd_wr_done  <=  1;
+      case (cfg_dwaddr)
+        4: cfg_do           <=  32'h00000200;
+        5: cfg_do           <=  32'h00001000;
+        6: cfg_do           <=  32'h00000000;
+        7: cfg_do           <=  32'h00000000;
+        8: cfg_do           <=  32'h00000000;
+        9: cfg_do           <=  32'h00000000;
+        default: cfg_do     <=  32'hFFFFFFFF;
+      endcase
+    end
+  end
+end
 
 
+
+
+
+//AXI Data D2H
 //Data From Core to PCIE Reader
+/*
 reg [3:0] ds_state;
-
 always @ (posedge clk) begin
   s_axis_tx_tready  <=  0;
   if (rst) begin
@@ -375,10 +480,6 @@ always @ (posedge clk) begin
     endcase
   end
 end
-
-
-
-
-
+*/
 
 endmodule

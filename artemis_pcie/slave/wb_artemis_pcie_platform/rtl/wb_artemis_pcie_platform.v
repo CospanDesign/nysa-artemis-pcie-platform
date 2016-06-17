@@ -62,28 +62,28 @@ SOFTWARE.
   Device Size: Number of Registers
   SDB_SIZE:3
 */
+`include "project_defines.v"
 
-`define CTRL_BIT_ENABLE             0
-`define CTRL_BIT_SEND_CONTROL_BLOCK 1
-`define CTRL_BIT_CANCEL_SEND_BLOCK  2
-`define CTRL_BIT_ENABLE_LOCAL_READ  3
+`define CTRL_BIT_SOURCE_EN      0
+`define CTRL_BIT_CANCEL_WRITE   1
+`define CTRL_BIT_SINK_EN        2
 
-`define STS_BIT_PCIE_RESET          0
-`define STS_BIT_LINKUP              1
-`define STS_BIT_RECEIVED_HOT_RESET  2
-`define STS_BITS_PCIE_LINK_STATE    6:4
-`define STS_BITS_PCIE_BUS_NUM       15:8
-`define STS_BITS_PCIE_DEV_NUM       19:16
-`define STS_BITS_PCIE_FUNC_NUM      22:20
-`define STS_BITS_LOCAL_MEM_IDLE     24
+
+`define STS_BIT_LINKUP          0
+`define STS_BIT_READ_IDLE       1
+`define STS_PER_FIFO_SEL        2
+`define STS_MEM_FIFO_SEL        3
+`define STS_DMA_FIFO_SEL        4
+`define STS_WRITE_EN            5
+`define STS_READ_EN             6
 
 
 `define LOCAL_BUFFER_OFFSET         24'h000100
 
-
 module wb_artemis_pcie_platform #(
-  parameter           CONTROL_FIFO_DEPTH = 7,
-  parameter           DATA_FIFO_DEPTH = 9
+  parameter           DATA_INGRESS_FIFO_DEPTH = 10,
+  parameter           DATA_EGRESS_FIFO_DEPTH  = 6,
+  parameter           CONTROL_FIFO_DEPTH = 7
 ) (
   input               clk,
   input               rst,
@@ -100,331 +100,231 @@ module wb_artemis_pcie_platform #(
   output  reg [31:0]  o_wbs_dat,
   input       [31:0]  i_wbs_adr,
 
+  output      [31:0]  o_debug_data,
   //This interrupt can be controlled from this module or a submodule
   output  reg         o_wbs_int,
 
-  //PCIE Physical Signals
-  input               clk_100mhz_gtp_p,
-  input               clk_100mhz_gtp_n,
+  //Host Interface
+  output              o_pcie_reset,
+  output              o_pcie_per_fifo_sel,
+  output              o_pcie_mem_fifo_sel,
+  output              o_pcie_dma_fifo_sel,
 
-  output              pci_exp_txp,
-  output              pci_exp_txn,
-  input               pci_exp_rxp,
-  input               pci_exp_rxn
+  input               i_pcie_write_fin,
+  input               i_pcie_read_fin,
+
+  output      [31:0]  o_pcie_data_size,
+  output      [31:0]  o_pcie_data_address,
+  output              o_pcie_data_fifo_flg,
+  output              o_pcie_data_read_flg,
+  output              o_pcie_data_write_flg,
+
+  input               i_pcie_interrupt_stb,
+  input       [31:0]  i_pcie_interrupt_value,
+
+  input               i_pcie_data_clk,
+  output              o_pcie_ingress_fifo_rdy,
+  input               i_pcie_ingress_fifo_act,
+  output      [23:0]  o_pcie_ingress_fifo_size,
+  input               i_pcie_ingress_fifo_stb,
+  output      [31:0]  o_pcie_ingress_fifo_data,
+  output              o_pcie_ingress_fifo_idle,
+
+  output      [1:0]   o_pcie_egress_fifo_rdy,
+  input       [1:0]   i_pcie_egress_fifo_act,
+  output      [23:0]  o_pcie_egress_fifo_size,
+  input               i_pcie_egress_fifo_stb,
+  input       [31:0]  i_pcie_egress_fifo_data,
+
+
+  //PCIE Physical Signals
+  input               i_clk_100mhz_gtp_p,
+  input               i_clk_100mhz_gtp_n,
+
+  output              o_pcie_phy_tx_p,
+  output              o_pcie_phy_tx_n,
+
+  input               i_pcie_phy_rx_p,
+  input               i_pcie_phy_rx_n,
+
+  input               i_pcie_reset_n,
+  output              o_pcie_wake_n
 );
 
 //Local Parameters
-localparam    CONTROL_BUFFER_SIZE = 2 ** CONTROL_FIFO_DEPTH;
+localparam  CONTROL             = 32'h00;
+localparam  STATUS              = 32'h01;
+localparam  CFG_READ_EXEC       = 32'h02;
+localparam  CFG_SM_STATE        = 32'h03;
+localparam  CTR_SM_STATE        = 32'h04;
+localparam  INGRESS_COUNT       = 32'h05;
+localparam  INGRESS_STATE       = 32'h06;
+localparam  INGRESS_RI_COUNT    = 32'h07;
+localparam  INGRESS_CI_COUNT    = 32'h08;
+localparam  INGRESS_ADDR        = 32'h09;
+localparam  INGRESS_CMPLT_COUNT = 32'h0A;
+localparam  IH_STATE            = 32'h0B;
+localparam  OH_STATE            = 32'h0C;
+localparam  BRAM_NUM_READS      = 32'h0D;
+localparam  LOCAL_BUFFER_SIZE   = 32'h0E;
+localparam  DBG_ID_VALUE        = 32'h0F;
+localparam  DBG_COMMAND_VALUE   = 32'h10;
+localparam  DBG_COUNT_VALUE     = 32'h11;
+localparam  DBG_ADDRESS_VALUE   = 32'h12;
 
-localparam    CONTROL             = 00;
-localparam    STATUS              = 01;
-localparam    NUM_BLOCK_READ      = 02;
-localparam    LOCAL_BUFFER_SIZE   = 03;
+localparam  CONTROL_BUFFER_SIZE = 2 ** CONTROL_FIFO_DEPTH;
 
 //Local Registers/Wires
-
-wire      [31:0]        status;
-
-reg                     r_enable_pcie;
-
-// Transaction (TRN) Interface
-wire                    user_lnk_up;
-
-  // Flow Control
-wire      [2:0]         fc_sel;
-wire      [7:0]         fc_nph;
-wire      [11:0]        fc_npd;
-wire      [7:0]         fc_ph;
-wire      [11:0]        fc_pd;
-wire      [7:0]         fc_cplh;
-wire      [11:0]        fc_cpld;
+reg               r_mem_2_ppfifo_stb;
+reg               r_snk_en;
 
 
-  // Host (CFG) Interface
-wire      [31:0]        cfg_do;
-wire                    cfg_rd_wr_done;
-wire      [9:0]         cfg_dwaddr;
-wire                    cfg_rd_en;
+wire              w_out_en;
+wire  [31:0]      w_out_status;
+wire  [31:0]      w_out_address;
+wire  [31:0]      w_out_data;
+wire  [27:0]      w_out_data_count;
+wire              w_master_ready;
 
-  // Configuration: Error
-wire                    cfg_err_ur;
-wire                    cfg_err_cor;
-wire                    cfg_err_ecrc;
-wire                    cfg_err_cpl_timeout;
-wire                    cfg_err_cpl_abort;
-wire                    cfg_err_posted;
-wire                    cfg_err_locked;
-wire      [47:0]        cfg_err_tlp_cpl_header;
-wire                    cfg_err_cpl_rdy;
-
-  // Conifguration: Interrupt
-wire                    cfg_interrupt;
-wire                    cfg_interrupt_rdy;
-wire                    cfg_interrupt_assert;
-wire      [7:0]         cfg_interrupt_do;
-wire      [7:0]         cfg_interrupt_di;
-wire      [2:0]         cfg_interrupt_mmenable;
-wire                    cfg_interrupt_msienable;
-
-  // Configuration: Power Management
-wire                    cfg_turnoff_ok;
-wire                    cfg_to_turnoff;
-wire                    cfg_pm_wake;
-
-  // Configuration: System/Status
-wire      [2:0]         cfg_pcie_link_state;
-reg                     r_cfg_trn_pending;
-wire      [7:0]         cfg_bus_number;
-wire      [4:0]         cfg_device_number;
-wire      [2:0]         cfg_function_number;
-
-wire      [15:0]        cfg_status;
-wire      [15:0]        cfg_command;
-wire      [15:0]        cfg_dstatus;
-wire      [15:0]        cfg_dcommand;
-wire      [15:0]        cfg_lstatus;
-wire      [15:0]        cfg_lcommand;
-
-  // System Interface
-wire                    pcie_reset;
-wire                    received_hot_reset;
-
-
-reg                               r_ppfifo_2_mem_en;
-reg                               r_mem_2_ppfifo_stb;
-reg                               r_cancel_write_stb;
-wire  [31:0]                      w_num_reads;
-wire                              w_idle;
-
-//User Memory Interface
-reg                               r_lcl_mem_we;
-wire  [CONTROL_FIFO_DEPTH -1: 0]  w_lcl_mem_addr;
-reg   [31:0]                      r_lcl_mem_din;
-wire  [31:0]                      w_lcl_mem_dout;
-wire                              w_lcl_mem_valid;
-
-wire                              w_lcl_mem_en;
-
-
-wire                              w_cmd_in_rd_stb;
-wire                              w_cmd_in_rd_ready;
-wire                              w_cmd_in_rd_activate;
-wire  [23:0]                      w_cmd_in_rd_size;
-wire  [31:0]                      w_cmd_in_rd_data;
-
-wire  [1:0]                       w_cmd_out_wr_ready;
-wire  [1:0]                       w_cmd_out_wr_activate;
-wire  [23:0]                      w_cmd_out_wr_size;
-wire                              w_cmd_out_wr_stb;
-wire  [31:0]                      w_cmd_out_wr_data;
-
-wire                              w_data_in_rd_stb;
-wire                              w_data_in_rd_ready;
-wire                              w_data_in_rd_activate;
-wire  [23:0]                      w_data_in_rd_size;
-wire  [31:0]                      w_data_in_rd_data;
-
-wire  [1:0]                       w_data_out_wr_ready;
-wire  [1:0]                       w_data_out_wr_activate;
-wire  [23:0]                      w_data_out_wr_size;
-wire                              w_data_out_wr_stb;
-wire  [31:0]                      w_data_out_wr_data;
-
+wire              w_in_ready;
+wire  [31:0]      w_in_command;
+wire  [31:0]      w_in_address;
+wire  [31:0]      w_in_data;
+wire  [27:0]      w_in_data_count;
+wire              w_out_ready;
+wire              w_ih_reset;
 
 //Submodules
-artemis_pcie_interface #(
-  .CONTROL_FIFO_DEPTH             (CONTROL_FIFO_DEPTH     ),
-  .DATA_FIFO_DEPTH                (DATA_FIFO_DEPTH        ),
-  .SERIAL_NUMBER                  (64'h000000000000C594   )
-)api (
-  .clk                            (clk                    ),
-  .rst                            (rst || !r_enable_pcie  ),
+  //Memory Interface
+  //DDR3 Control Signals
+wire      [3:0]      w_ih_state;
+wire      [3:0]      w_oh_state;
 
-  .gtp_clk_p                      (clk_100mhz_gtp_p       ),
-  .gtp_clk_n                      (clk_100mhz_gtp_n       ),
-  .pci_exp_txp                    (pci_exp_txp            ),
-  .pci_exp_txn                    (pci_exp_txn            ),
-  .pci_exp_rxp                    (pci_exp_rxp            ),
-  .pci_exp_rxn                    (pci_exp_rxn            ),
+
+
+wire                  w_lcl_mem_en;
+
+wire      [31:0]      w_id_value;
+wire      [31:0]      w_command_value;
+wire      [31:0]      w_count_value;
+wire      [31:0]      w_address_value;
+
+//assign  w_lcl_mem_en            = ((i_wbs_adr >= `LOCAL_BUFFER_OFFSET) &&
+//                                   (i_wbs_adr < (`LOCAL_BUFFER_OFFSET + CONTROL_BUFFER_SIZE)));
+
+//assign  w_bram_addr             = w_lcl_mem_en ? (i_wbs_adr - `LOCAL_BUFFER_OFFSET) : 0;
+
+
+
+
+artemis_pcie_controller #(
+  .DATA_INGRESS_FIFO_DEPTH           (10                           ),
+  .DATA_EGRESS_FIFO_DEPTH            (6                            ),
+  .SERIAL_NUMBER                     (64'h000000000000C594         )
+)api (
+  .clk                               (clk                          ), //User Clock
+  .rst                               (rst                          ), //User Reset
+
+  //PCIE Phy Interface
+  .gtp_clk_p                         (i_clk_100mhz_gtp_p           ),
+  .gtp_clk_n                         (i_clk_100mhz_gtp_n           ),
+
+  .pci_exp_txp                       (o_pcie_phy_tx_p              ),
+  .pci_exp_txn                       (o_pcie_phy_tx_n              ),
+  .pci_exp_rxp                       (i_pcie_phy_rx_p              ),
+  .pci_exp_rxn                       (i_pcie_phy_rx_n              ),
 
   // Transaction (TRN) Interface
-  .user_lnk_up                    (user_lnk_up            ),
+  .o_pcie_reset                      (o_pcie_reset                 ),
+  .user_lnk_up                       (user_lnk_up                  ),
+  .clk_62p5                          (clk_62p5                     ),
+  .i_pcie_reset                      (!i_pcie_reset_n              ),
 
-  // Flow Control
-  .fc_sel                         (fc_sel                 ),
-  .fc_nph                         (fc_nph                 ),
-  .fc_npd                         (fc_npd                 ),
-  .fc_ph                          (fc_ph                  ),
-  .fc_pd                          (fc_pd                  ),
-  .fc_cplh                        (fc_cplh                ),
-  .fc_cpld                        (fc_cpld                ),
+  //User Interfaces
+  .o_per_fifo_sel                    (o_pcie_per_fifo_sel          ),
+  .o_mem_fifo_sel                    (o_pcie_mem_fifo_sel          ),
+  .o_dma_fifo_sel                    (o_pcie_dma_fifo_sel          ),
 
-  // Host (CFG) Interface
-  .cfg_do                         (cfg_do                 ),
-  .cfg_rd_wr_done                 (cfg_rd_wr_done         ),
-  .cfg_dwaddr                     (cfg_dwaddr             ),
-  .cfg_rd_en                      (cfg_rd_en              ),
+  .i_write_fin                       (i_pcie_write_fin             ),
+  .i_read_fin                        (i_pcie_read_fin              ),
 
-  // Configuration: Error
-  .cfg_err_ur                     (cfg_err_ur             ),
-  .cfg_err_cor                    (cfg_err_cor            ),
-  .cfg_err_ecrc                   (cfg_err_ecrc           ),
-  .cfg_err_cpl_timeout            (cfg_err_cpl_timeout    ),
-  .cfg_err_cpl_abort              (cfg_err_cpl_abort      ),
-  .cfg_err_posted                 (cfg_err_posted         ),
-  .cfg_err_locked                 (cfg_err_locked         ),
-  .cfg_err_tlp_cpl_header         (cfg_err_tlp_cpl_header ),
-  .cfg_err_cpl_rdy                (cfg_err_cpl_rdy        ),
+  .i_usr_interrupt_stb               (i_pcie_interrupt             ),
+  .i_usr_interrupt_value             (i_pcie_interrupt_value       ),
 
-  // Conifguration: Interrupt
-  .cfg_interrupt                  (cfg_interrupt          ),
-  .cfg_interrupt_rdy              (cfg_interrupt_rdy      ),
-  .cfg_interrupt_assert           (cfg_interrupt_assert   ),
-  .cfg_interrupt_do               (cfg_interrupt_do       ),
-  .cfg_interrupt_di               (cfg_interrupt_di       ),
-  .cfg_interrupt_mmenable         (cfg_interrupt_mmenable ),
-  .cfg_interrupt_msienable        (cfg_interrupt_msienable),
+  .o_data_size                       (o_pcie_data_size             ),
+  .o_data_address                    (o_pcie_data_address          ),
+  .o_data_fifo_flg                   (o_pcie_data_fifo_flg         ),
+  .o_data_read_flg                   (o_pcie_data_read_flg         ),
+  .o_data_write_flg                  (o_pcie_data_write_flg        ),
+
+  //Ingress FIFO
+  .i_data_clk                        (i_pcie_data_clk              ),
+  .o_ingress_fifo_rdy                (o_pcie_ingress_fifo_rdy      ),
+  .i_ingress_fifo_act                (i_pcie_ingress_fifo_act      ),
+  .o_ingress_fifo_size               (o_pcie_ingress_fifo_size     ),
+  .i_ingress_fifo_stb                (i_pcie_ingress_fifo_stb      ),
+  .o_ingress_fifo_data               (o_pcie_ingress_fifo_data     ),
+  .o_ingress_fifo_idle               (o_pcie_ingress_fifo_idle     ),
+
+  //Egress FIFO
+  .o_egress_fifo_rdy                 (o_pcie_egress_fifo_rdy       ),
+  .i_egress_fifo_act                 (i_pcie_egress_fifo_act       ),
+  .o_egress_fifo_size                (o_pcie_egress_fifo_size      ),
+  .i_egress_fifo_stb                 (i_pcie_egress_fifo_stb       ),
+  .i_egress_fifo_data                (i_pcie_egress_fifo_data      ),
 
   // Configuration: Power Management
-  .cfg_turnoff_ok                 (cfg_turnoff_ok         ),
-  .cfg_to_turnoff                 (cfg_to_turnoff         ),
-  .cfg_pm_wake                    (cfg_pm_wake            ),
-
-  // Configuration: System/Status
-  .cfg_pcie_link_state            (cfg_pcie_link_state    ),
-  .cfg_trn_pending_stb            (r_cfg_trn_pending      ),
-  .cfg_bus_number                 (cfg_bus_number         ),
-  .cfg_device_number              (cfg_device_number      ),
-  .cfg_function_number            (cfg_function_number    ),
-
-  .cfg_status                     (cfg_status             ),
-  .cfg_command                    (cfg_command            ),
-  .cfg_dstatus                    (cfg_dstatus            ),
-  .cfg_dcommand                   (cfg_dcommand           ),
-  .cfg_lstatus                    (cfg_lstatus            ),
-  .cfg_lcommand                   (cfg_lcommand           ),
+  .cfg_turnoff_ok                    (1'b0                         ),
+  .cfg_pm_wake                       (1'b0                         ),
 
   // System Interface
-  .pcie_reset                     (pcie_reset             ),
-  .received_hot_reset             (received_hot_reset     ),
+//  .received_hot_reset                (received_hot_reset           ),
+//  .gtp_pll_lock_detect               (gtp_pll_lock_detect          ),
+//  .gtp_reset_done                    (gtp_reset_done               ),
+//  .pll_lock_detect                   (pll_lock_detect              ),
 
-  .i_cmd_in_rd_stb                (w_cmd_in_rd_stb        ),
-  .o_cmd_in_rd_ready              (w_cmd_in_rd_ready      ),
-  .i_cmd_in_rd_activate           (w_cmd_in_rd_activate   ),
-  .o_cmd_in_rd_count              (w_cmd_in_rd_size      ),
-  .o_cmd_in_rd_data               (w_cmd_in_rd_data       ),
+//  .rx_elec_idle                      (rx_elec_idle                 ),
+  .rx_equalizer_ctrl                 (2'b11                        ),
 
-  .o_cmd_out_wr_ready             (w_cmd_out_wr_ready     ),
-  .i_cmd_out_wr_activate          (w_cmd_out_wr_activate  ),
-  .o_cmd_out_wr_size              (w_cmd_out_wr_size      ),
-  .i_cmd_out_wr_stb               (w_cmd_out_wr_stb       ),
-  .i_cmd_out_wr_data              (w_cmd_out_wr_data      ),
+  .tx_diff_ctrl                      (4'h9                         ),
+  .tx_pre_emphasis                   (3'b00                        ),
 
-  .i_data_in_rd_stb               (w_data_in_rd_stb       ),
-  .o_data_in_rd_ready             (w_data_in_rd_ready     ),
-  .i_data_in_rd_activate          (w_data_in_rd_activate  ),
-  .o_data_in_rd_count             (w_data_in_rd_size     ),
-  .o_data_in_rd_data              (w_data_in_rd_data      ),
 
-  .o_data_out_wr_ready            (w_data_out_wr_ready    ),
-  .i_data_out_wr_activate         (w_data_out_wr_activate ),
-  .o_data_out_wr_size             (w_data_out_wr_size     ),
-  .i_data_out_wr_stb              (w_data_out_wr_stb      ),
-  .i_data_out_wr_data             (w_data_out_wr_data     )
+//  .o_cfg_read_exec                   (o_cfg_read_exec              ),
+//  .o_cfg_sm_state                    (o_cfg_sm_state               ),
+//  .o_sm_state                        (o_sm_state                   ),
+//  .o_ingress_count                   (o_ingress_count              ),
+//  .o_ingress_state                   (o_ingress_state              ),
+//  .o_ingress_ri_count                (o_ingress_ri_count           ),
+//  .o_ingress_ci_count                (o_ingress_ci_count           ),
+//  .o_ingress_cmplt_count             (o_ingress_cmplt_count        ),
+//  .o_ingress_addr                    (o_ingress_addr               ),
 
+
+  // Configuration: Error
+  .cfg_err_ur                        (1'b0                         ),
+  .cfg_err_cor                       (1'b0                         ),
+  .cfg_err_ecrc                      (1'b0                         ),
+  .cfg_err_cpl_timeout               (1'b0                         ),
+  .cfg_err_cpl_abort                 (1'b0                         ),
+  .cfg_err_posted                    (1'b0                         ),
+  .cfg_err_locked                    (1'b0                         ),
+  .cfg_err_tlp_cpl_header            (48'b0                        )
+  //.cfg_err_cpl_rdy                   (cfg_err_cpl_rdy              )
 );
 
-adapter_dpb_ppfifo #(
-  .MEM_DEPTH                          (CONTROL_FIFO_DEPTH     ),
-  .DATA_WIDTH                         (32                     )
-)dpb_bridge (
-  .clk                                (clk                    ),
-  .rst                                (rst                    ),
-  .i_ppfifo_2_mem_en                  (r_ppfifo_2_mem_en      ),
-  .i_mem_2_ppfifo_stb                 (r_mem_2_ppfifo_stb     ),
-  .i_cancel_write_stb                 (r_cancel_write_stb     ),
-  .o_num_reads                        (w_num_reads            ),
-  .o_idle                             (w_idle                 ),
-
-
-  .i_bram_we                          (r_lcl_mem_we           ),
-  .i_bram_addr                        (w_lcl_mem_addr         ),
-  .i_bram_din                         (r_lcl_mem_din          ),
-  .o_bram_dout                        (w_lcl_mem_dout         ),
-  .o_bram_valid                       (w_lcl_mem_valid        ),
-
-
-  .ppfifo_clk                         (clk                    ),
-
-  .i_write_ready                      (w_cmd_out_wr_ready     ),
-  .o_write_activate                   (w_cmd_out_wr_activate  ),
-  .i_write_size                       (w_cmd_out_wr_size      ),
-  .o_write_stb                        (w_cmd_out_wr_stb       ),
-  .o_write_data                       (w_cmd_out_wr_data      ),
-
-  .i_read_ready                       (w_cmd_in_rd_ready      ),
-  .o_read_activate                    (w_cmd_in_rd_activate   ),
-  .i_read_size                        (w_cmd_in_rd_size       ),
-  .i_read_data                        (w_cmd_in_rd_data       ),
-  .o_read_stb                         (w_cmd_in_rd_stb        )
-);
-
-
-//Asynchronous Logic
-assign  fc_sel                 = 3'h0;
-
-assign  cfg_dwaddr             = 10'h0;
-assign  cfg_rd_en              = 1'b0;
-
-assign  cfg_err_ur             = 0;
-assign  cfg_err_cor            = 0;
-assign  cfg_err_ecrc           = 0;
-assign  cfg_err_cpl_timeout    = 0;
-assign  cfg_err_cpl_abort      = 0;
-assign  cfg_err_posted         = 0;
-assign  cfg_err_locked         = 0;
-assign  cfg_err_tlp_cpl_header = 0;
-
-assign  cfg_interrupt          = 0;
-assign  cfg_interrupt_assert   = 0;
-assign  cfg_interrupt_di       = 0;
-
-assign  cfg_turnoff_ok         = 0;
-assign  cfg_pm_wake            = 0;
-
-
-assign  w_data_in_rd_activate   = 0;
-assign  w_data_in_rd_stb        = 0;
-
-assign  w_data_out_wr_activate  = 0;
-assign  w_data_out_wr_stb       = 0;
-assign  w_data_out_wr_data      = 0;
-
-
-assign  w_lcl_mem_en            = ((i_wbs_adr >= `LOCAL_BUFFER_OFFSET) &&
-                                   (i_wbs_adr < (`LOCAL_BUFFER_OFFSET + CONTROL_BUFFER_SIZE)));
-
-assign  w_lcl_mem_addr          = w_lcl_mem_en ? (i_wbs_adr - `LOCAL_BUFFER_OFFSET) : 0;
-//Synchronous Logic
 always @ (posedge clk) begin
-
-  //Deassert Strobes
-  r_mem_2_ppfifo_stb            <=  0;
-  r_cancel_write_stb            <=  0;
-  r_cfg_trn_pending             <=  0;
-  r_lcl_mem_we                  <=  0;
-
+  //r_mem_2_ppfifo_stb      <= 0;
+  //r_cancel_write_stb      <= 0;
+  //r_bram_we               <=  0;
   if (rst) begin
-    o_wbs_dat                   <=  32'h0;
-    o_wbs_ack                   <=  0;
-    o_wbs_int                   <=  0;
-    r_ppfifo_2_mem_en           <=  0;
-    r_enable_pcie               <=  0;
+    o_wbs_dat             <= 32'h0;
+    o_wbs_ack             <= 0;
+    o_wbs_int             <= 0;
+//    r_bram_din            <= 0;
 
-    r_lcl_mem_din               <=  0;
-
+    r_snk_en              <= 1;
   end
-
   else begin
     //when the master acks our ack, then put our ack down
     if (o_wbs_ack && ~i_wbs_stb)begin
@@ -439,62 +339,122 @@ always @ (posedge clk) begin
           case (i_wbs_adr)
             CONTROL: begin
               $display("ADDR: %h user wrote %h", i_wbs_adr, i_wbs_dat);
-              r_mem_2_ppfifo_stb  <=  i_wbs_dat[`CTRL_BIT_SEND_CONTROL_BLOCK];
-              r_cancel_write_stb  <=  i_wbs_dat[`CTRL_BIT_CANCEL_SEND_BLOCK];
-              r_ppfifo_2_mem_en   <=  i_wbs_dat[`CTRL_BIT_ENABLE_LOCAL_READ];
-              r_enable_pcie       <=  i_wbs_dat[`CTRL_BIT_ENABLE];
+              //r_mem_2_ppfifo_stb                  <=  i_wbs_dat[`CTRL_BIT_SOURCE_EN];
+              //r_cancel_write_stb                  <=  i_wbs_dat[`CTRL_BIT_CANCEL_WRITE];
+              r_snk_en                            <=  i_wbs_dat[`CTRL_BIT_SINK_EN];
+            end
+            default: begin
+/*
+              if (w_lcl_mem_en) begin
+                r_bram_we                          <=  1;
+                r_bram_din                         <=  i_wbs_dat;
+              end
+*/
 
             end
-            STATUS: begin
-              $display("ADDR: %h user wrote %h", i_wbs_adr, i_wbs_dat);
-            end
-            NUM_BLOCK_READ: begin
-              $display("ADDR: %h user wrote %h", i_wbs_adr, i_wbs_dat);
-            end
-            //add as many ADDR_X you need here
-            default: begin
-              if (w_lcl_mem_en) begin
-                r_lcl_mem_we                          <=  1;
-                r_lcl_mem_din                         <=  i_wbs_dat;
-              end
-            end
           endcase
-          o_wbs_ack <= 1;
+          o_wbs_ack                                 <= 1;
         end
         else begin
           //read request
           case (i_wbs_adr)
             CONTROL: begin
-              o_wbs_dat                               <=  0;
-              o_wbs_dat[`CTRL_BIT_ENABLE_LOCAL_READ]  <=  r_ppfifo_2_mem_en;
-              o_wbs_dat[`CTRL_BIT_ENABLE]             <=  r_enable_pcie;
+              o_wbs_dat <= 0;
+              //o_wbs_dat[`CTRL_BIT_SOURCE_EN]      <= r_mem_2_ppfifo_stb;
+              //o_wbs_dat[`CTRL_BIT_CANCEL_WRITE]   <= r_cancel_write_stb;
+              o_wbs_dat[`CTRL_BIT_SINK_EN]        <= r_snk_en;
+
             end
             STATUS: begin
-              o_wbs_dat                               <=  0;
-              o_wbs_dat[`STS_BIT_PCIE_RESET]          <=  pcie_reset;
-              o_wbs_dat[`STS_BIT_LINKUP]              <=  user_lnk_up;
-              o_wbs_dat[`STS_BIT_RECEIVED_HOT_RESET]  <=  received_hot_reset;
-              o_wbs_dat[`STS_BITS_PCIE_LINK_STATE]    <=  cfg_pcie_link_state;
-              o_wbs_dat[`STS_BITS_PCIE_BUS_NUM]       <=  cfg_bus_number;
-              o_wbs_dat[`STS_BITS_PCIE_DEV_NUM]       <=  cfg_device_number;
-              o_wbs_dat[`STS_BITS_PCIE_FUNC_NUM]      <=  cfg_function_number;
+              o_wbs_dat <= 0;
+              //o_wbs_dat[`STS_BIT_LINKUP]          <=  w_user_lnk_up;
+              //o_wbs_dat[`STS_BIT_READ_IDLE]       <=  w_read_idle;
+
+/*
+              o_wbs_dat[`STS_PER_FIFO_SEL]        <=  w_per_fifo_sel;
+              o_wbs_dat[`STS_MEM_FIFO_SEL]        <=  w_mem_fifo_sel;
+              o_wbs_dat[`STS_DMA_FIFO_SEL]        <=  w_dma_fifo_sel;
+              o_wbs_dat[`STS_WRITE_EN]            <=  w_write_flag;
+              o_wbs_dat[`STS_READ_EN]             <=  w_read_flag;
+*/
+
             end
-            NUM_BLOCK_READ: begin
-              o_wbs_dat <= w_num_reads;
+/*
+            CFG_READ_EXEC: begin
+              o_wbs_dat <= 0;
+              o_wbs_dat[7:0]  <=   o_cfg_read_exec;
+            end
+            CFG_SM_STATE: begin
+              o_wbs_dat <= 0;
+              o_wbs_dat[3:0]  <=   o_cfg_sm_state;
+            end
+            CTR_SM_STATE: begin
+              o_wbs_dat <= 0;
+              o_wbs_dat[3:0]  <=   o_sm_state;
+            end
+            INGRESS_COUNT: begin
+              o_wbs_dat <= 0;
+              o_wbs_dat[7:0]  <=   o_ingress_count;
+            end
+            INGRESS_STATE: begin
+              o_wbs_dat <= 0;
+              o_wbs_dat[3:0]  <=   o_ingress_state;
+            end
+            INGRESS_RI_COUNT: begin
+              o_wbs_dat <= 0;
+              o_wbs_dat[7:0]  <=   o_ingress_ri_count;
+            end
+            INGRESS_CI_COUNT: begin
+              o_wbs_dat <= 0;
+              o_wbs_dat[7:0]  <=   o_ingress_ci_count;
+            end
+            INGRESS_ADDR: begin
+              o_wbs_dat <= 0;
+              o_wbs_dat[31:0]  <=  o_ingress_addr;
+            end
+            INGRESS_CMPLT_COUNT: begin
+              o_wbs_dat <= 0;
+              o_wbs_dat[31:0]  <=  o_ingress_cmplt_count;
+            end
+            IH_STATE: begin
+              o_wbs_dat         <= 0;
+              o_wbs_dat[3:0]    <=  w_ih_state;
+            end
+            OH_STATE: begin
+              o_wbs_dat         <= 0;
+              o_wbs_dat[3:0]    <=  w_oh_state;
+            end
+            BRAM_NUM_READS: begin
+              o_wbs_dat         <=  w_num_reads;
             end
             LOCAL_BUFFER_SIZE: begin
-              o_wbs_dat <= CONTROL_BUFFER_SIZE;
+              o_wbs_dat         <= CONTROL_BUFFER_SIZE;
             end
+            DBG_ID_VALUE: begin
+              o_wbs_dat         <=  w_id_value;
+            end
+            DBG_COMMAND_VALUE: begin
+              o_wbs_dat         <=  w_command_value;
+            end
+            DBG_COUNT_VALUE: begin
+              o_wbs_dat         <=  w_count_value;
+            end
+            DBG_ADDRESS_VALUE: begin
+              o_wbs_dat         <=  w_address_value;
+            end
+*/
             //add as many ADDR_X you need here
             default: begin
+/*
               if (w_lcl_mem_en) begin
-                o_wbs_dat                             <=  w_lcl_mem_dout;
+                o_wbs_dat         <=  w_bram_dout;
               end
+*/
             end
           endcase
-          if (w_lcl_mem_valid) begin
-            o_wbs_ack <= 1;
-          end
+          //if (w_bram_valid) begin
+            o_wbs_ack             <=  1;
+          //end
         end
       end
     end

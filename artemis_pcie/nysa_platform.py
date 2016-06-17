@@ -20,67 +20,119 @@
 #SOFTWARE.
 
 """
-Artemis PCIE Interface
+ArtemisPcie Interface
 """
 __author__ = 'dave.mccoy@cospandesign.com (Dave McCoy)'
 
 import sys
 import os
-import subprocess
+import glob
+import json
+import hashlib
+from artemis_pcie import ArtemisPcie
+
 
 from nysa.host.nysa_platform import Platform
-from nysa.host.nysa_platform import SYSTEM_NAME
-from nysa.host.nysa_platform import SYSTEM_DIST
-
-import usb.core
-import usb.util
-from ftdi import Ftdi
-
-sys.path.append(os.path.join(os.path.dirname(__file__),
-                             os.pardir,
-                             os.pardir))
-
-import nysa
 from nysa.ibuilder.lib.xilinx_utils import find_xilinx_path
-from artemis_pcie import ArtemisPCIE
+from artemis_pcie import ArtemisPcie
 
-class ArtemisPCIEPlatform(Platform):
+SYSFS_PCIE_DRIVER_PATH = os.path.join(os.path.sep, "sys", "bus", "pci", "drivers", "nysa_pcie")
+DEV_PATH = os.path.join(os.path.sep, "dev")
+DRIVER_NAME = "nysa_pcie"
 
+class ArtemisPciePlatform(Platform):
     def __init__(self, status = None):
-        super (ArtemisPCIEPlatform, self).__init__(status)
-        self.vendor = 0x0403
-        self.product = 0x8532
+        super (ArtemisPciePlatform, self).__init__(status)
 
     def get_type(self):
+        if self.status: self.status.Verbose("Returnig 'artemis_pcie' type")
         return "artemis_pcie"
 
     def scan(self):
-        self.status.Verbose("Scanning")
-        devices = usb.core.find(find_all = True)
-        for device in devices:
-            if device.idVendor == self.vendor and device.idProduct == self.product:
-                self.add_device_dict(device.serial_number, ArtemisPCIE(idVendor = self.vendor,
-                                                      idProduct = self.product,
-                                                      sernum = device.serial_number,
-                                                      status = self.status))
-        return self.dev_dict
+        """
+        Nysa will call this function when the user wants to scan for the
+        platform specific boards
+
+        Args:
+            Nothing
+
+
+        Returns:
+            Dictionary of artemis_pcie instances, where the key is the serial number
+            or unique identifier of a board
+
+        Raises:
+            NysaError: An error occured when scanning for devices
+
+        """
+        inst_dict = {}
+        if not os.path.exists(SYSFS_PCIE_DRIVER_PATH):
+            return inst_dict
+
+        ids = []
+        for path, dirs, files in os.walk(DEV_PATH):
+            for f in files:
+                if f.startswith(DRIVER_NAME):
+                    ids.append(f)
+            
+
+        #if self.status: self.status.Warning("Scan function not implemented yet!")
+        for i in ids:
+            inst_dict[i] = ArtemisPcie(i, self.status)
+        return inst_dict
+        #raise AssertionError("%s not implemented" % sys._getframe().f_code.co_name)
 
     def test_build_tools(self):
+        """
+        Runs a test to determine if the Vendor specific build tools are present
+
+        Args:
+            Nothing
+
+        Returns:
+            Boolean:
+                True: Build tools found
+                False: Build tools not found
+
+        Raises:
+            NysaError: An error occured when scanning for the build tools
+        """
+        #raise AssertionError("%s not implemented" % sys._getframe().f_code.co_name)
+        #if self.status:  self.status.Warning("By default build tools is Xilinx this can be changed in artemis_pcie/nysa_platform.py")
         if find_xilinx_path() is None:
             return False
         return True
 
     def setup_platform(self):
-        if SYSTEM_NAME == "Linux":
-            print "linux distribution: %s" % SYSTEM_DIST[0]
-            source_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "board", "66-artemis-pcie.rules"))
-            if SYSTEM_DIST[0] == "Ubuntu":
-                print "Found Ubuntu platform, copying over rules, make sure to restart udev rules"
-                dest_path = "/etc/udev/rules.d/66-artemis-pcie.rules"
-                cmd = ["sudo", "cp", source_path, dest_path]
-                v = subprocess.call(cmd)
+        """
+        Run this to configure the system to recognize your platform, such as:
+            -installing drivers
+            -assigning PCIE express ports
+            -etc
 
-        if SYSTEM_NAME == "Windows":
-            print "Windows box!"
-        return
+        Args:
+            Nothing
+
+        Return:
+            Nothing
+
+        Raises:
+            Nothing
+        """
+        if self.status: self.status.Warning("Setup Function Not Implemented Yet!")
+
+    def uninstall_platform(self):
+        """
+        Run this to uninstall your platform from the system
+
+        Args:
+            Nothing
+
+        Return:
+            Nothing
+
+        Raises:
+            Nothing
+        """
+        if self.status: self.status.Warning("Uninstall Function Not Implemented Yet!")
 

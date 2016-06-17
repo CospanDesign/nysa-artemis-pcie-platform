@@ -1,22 +1,28 @@
 {
   "board_name":"Artemis_PCIE",
   "vendor":"Cospan Design",
-  "host_inteface":"ft_master_interface",
+  "host_inteface":"artemis_pcie_interface",
+  "build_tool":"nothing",
   "default_constraint_files":[
-    "artemis-pcie.ucf"
-    ],
+      ""
+      ],
   "parent_board":[
-    "artemis"
-    ],
-  "image":"artemis.png",
+  "artemis"
+  ],
+  "image":"",
   "default_project":"default.json",
-  "invert_reset":true,
-
+  "invert_reset":false,
+  "clockrate":100000000,
   "build_flags":{
     "bitgen":{
       "config":{
         "Binary":"Yes"
        }
+    },
+    "par":{
+      "flags":{
+        "-mt":"on"
+      }
     },
     "xst":{
       "flags":{
