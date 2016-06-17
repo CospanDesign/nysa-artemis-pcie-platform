@@ -1,0 +1,1 @@
+cmd_/home/cospan/Projects/nysa-artemis-usb2-platform/artemis_usb2/driver/src/nysa_pcie.o := ld -m elf_x86_64   -r -o /home/cospan/Projects/nysa-artemis-usb2-platform/artemis_usb2/driver/src/nysa_pcie.o /home/cospan/Projects/nysa-artemis-usb2-platform/artemis_usb2/driver/src/base.o /home/cospan/Projects/nysa-artemis-usb2-platform/artemis_usb2/driver/src/pcie_ctr.o 
