@@ -7,87 +7,29 @@ NET "rst"         TIG;
 NET CLK_50MHZ     LOC = Y13   | IOSTANDARD = LVTTL ;
 
 # User Clock Constraints
-NET "pcie/host_interface/api/pcie_interface/mgt_clk" TNM_NET = "tn_mgt_clk";
+NET "pcie/api/pcie_interface/mgt_clk" TNM_NET = "tn_mgt_clk";
 TIMESPEC "TS_tn_mgt_clk" = PERIOD "tn_mgt_clk" 8.0;
 
-NET "pcie/host_interface/api/pcie_interface/mgt_clk_2x" TNM_NET = "tn_mgt_clk_2x";
+NET "pcie/api/pcie_interface/mgt_clk_2x" TNM_NET = "tn_mgt_clk_2x";
 TIMESPEC "TS_mgt_clk_2x" = PERIOD "tn_mgt_clk_2x" 16.0;
 
-NET "pcie/host_interface/api/clk_62p5" TNM_NET = "tn_user_clk_out";
+NET "pcie/api/clk_62p5" TNM_NET = "tn_user_clk_out";
 TIMESPEC "TS_user_clk_out" = PERIOD "tn_user_clk_out" 16.0;
 
 #PCIE
-NET i_pcie_reset_n  LOC=R9  | IOSTANDARD = LVTTL;
-NET o_pcie_wake_n   LOC=Y4  | IOSTANDARD = LVTTL;
+NET pcie_reset_n  loc = r9    | iostandard = lvttl;
+NET pcie_wake_n   loc = y4    | iostandard = lvttl;
+NET smdat         loc = t11   | iostandard = lvttl;
+NET smclk         loc = r11   | iostandard = lvttl;
 
-#FTDI
-NET OE_N          LOC = Y10   | IOSTANDARD = LVTTL ;
-NET RXE_N         LOC = AB10  | IOSTANDARD = LVTTL ;
-NET SIWUA         LOC = W8    | IOSTANDARD = LVTTL ;
-NET WR_N          LOC = V7    | IOSTANDARD = LVTTL ;
-NET RD_N          LOC = AB6   | IOSTANDARD = LVTTL ;
-NET TXE_N         LOC = AA6   | IOSTANDARD = LVTTL ;
-#NET SUSPEND_N     LOC = U9    | IOSTANDARD = LVTTL | PULLUP;
-
-
-NET D<0>          LOC = Y9    | IOSTANDARD = LVTTL ;
-NET D<1>          LOC = AB9   | IOSTANDARD = LVTTL ;
-NET D<2>          LOC = Y5    | IOSTANDARD = LVTTL ;
-NET D<3>          LOC = AB5   | IOSTANDARD = LVTTL ;
-NET D<4>          LOC = W10   | IOSTANDARD = LVTTL ;
-NET D<5>          LOC = W14   | IOSTANDARD = LVTTL ;
-NET D<6>          LOC = Y14   | IOSTANDARD = LVTTL ;
-NET D<7>          LOC = AA10  | IOSTANDARD = LVTTL ;
-
-#HDMI Out
-NET HDMI_OUT_CLK  LOC = V15   | IOSTANDARD = TMDS_33;  #INVERTED
-NET HDMI_OUT_D0   LOC = AA16  | IOSTANDARD = TMDS_33;
-NET HDMI_OUT_D1   LOC = Y17   | IOSTANDARD = TMDS_33;
-NET HDMI_OUT_D2   LOC = W17   | IOSTANDARD = TMDS_33;
-
-NET HDMI_OUT_SCL  LOC = T15   | IOSTANDARD = LVTTL;
-NET HDMI_OUT_SDA  LOC = U15   | IOSTANDARD = LVTTL;
-
-#HDMI In
-NET HDMI_IN_CLK   LOC = AA12  | IOSTANDARD = TMDS_33;
-NET HDMI_IN_D0    LOC = V11   | IOSTANDARD = TMDS_33;  #INVERTED
-NET HDMI_IN_D1    LOC = W12   | IOSTANDARD = TMDS_33;  #INVERTED
-NET HDMI_IN_D2    LOC = U14   | IOSTANDARD = TMDS_33;  #INVERTED
-
-NET HDMI_IN_SCL   LOC = AA8   | IOSTANDARD = LVTTL;
-NET HDMI_IN_SDA   LOC = AB8   | IOSTANDARD = LVTTL;
-
-#PCIE
-NET PCI_RESET_N   LOC = R9    | IOSTANDARD = LVTTL;
-NET PCI_WAKE_N    LOC = Y4    | IOSTANDARD = LVTTL;
-NET SMDAT         LOC = T11   | IOSTANDARD = LVTTL;
-NET SMCLK         LOC = R11   | IOSTANDARD = LVTTL;
-
-
-#SERDES
-#SERDES CHANNEL 0: SATA (With Clock)
-#SERDES CHANNEL 1: PCIE
-
-#NET "pcie/api/pcie_interface/pcie_sys_clk" TNM_NET = "tn_pcie_sys_clk";
-#TIMESPEC "TS_pcie_sys_clk" = PERIOD "tn_pcie_sys_clk" 16.0;
-
-######################## locs for top level ports ######################
-#NET i_gtp0_clk_p    LOC=A10 | IOB = FALSE;
-#NET i_gtp0_clk_n    LOC=B10 | IOB = FALSE;
 
 NET i_gtp1_clk_p    LOC=C11 | IOB = FALSE;
 NET i_gtp1_clk_n    LOC=D11 | IOB = FALSE;
 
 ######################### mgt clock module constraints ########################
 
-#NET i_sata_phy_rx_p LOC=D7 | IOB = FALSE;
-#NET i_sata_phy_rx_n LOC=C7 | IOB = FALSE;
-
 NET i_pcie_phy_rx_p LOC=D9 | IOB = FALSE;
 NET i_pcie_phy_rx_n LOC=C9 | IOB = FALSE;
-
-#NET o_sata_phy_tx_p LOC=B6 | IOB = FALSE;
-#NET o_sata_phy_tx_n LOC=A6 | IOB = FALSE;
 
 NET o_pcie_phy_tx_p LOC=B8 | IOB = FALSE;
 NET o_pcie_phy_tx_n LOC=A8 | IOB = FALSE;
@@ -95,10 +37,10 @@ NET o_pcie_phy_tx_n LOC=A8 | IOB = FALSE;
 ################################# mgt wrapper constraints #####################
 
 ##---------- Set placement for tile0_rocketio_wrapper_i/GTPA1_DUAL ------
-INST pcie/host_interface/api/pcie_interface/GT_i LOC=GTPA1_DUAL_X0Y0;
+INST pcie/api/pcie_interface/GT_i LOC=GTPA1_DUAL_X0Y0;
 
 #NET sys_reset_n TIG;
 #NET sys_clk_c PERIOD = 10ns;
-NET pcie/host_interface/api/pcie_interface/gt_refclk_out(0) TNM_NET = GT_REFCLK_OUT;
+NET pcie/api/pcie_interface/gt_refclk_out(0) TNM_NET = GT_REFCLK_OUT;
 TIMESPEC TS_GT_REFCLK_OUT = PERIOD GT_REFCLK_OUT 10ns HIGH 50 % ;
 

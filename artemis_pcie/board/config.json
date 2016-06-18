@@ -4,14 +4,14 @@
   "host_inteface":"artemis_pcie_interface",
   "build_tool":"nothing",
   "default_constraint_files":[
-      ""
+      "artemis_pcie.ucf"
       ],
   "parent_board":[
   "artemis"
   ],
   "image":"",
   "default_project":"default.json",
-  "invert_reset":false,
+  "invert_reset":true,
   "clockrate":100000000,
   "build_flags":{
     "bitgen":{

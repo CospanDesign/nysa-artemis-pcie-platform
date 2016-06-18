@@ -13,6 +13,7 @@ MODULE:
 
 instrules:
 	sudo cp rules/${RULES_FILE} /etc/udev/rules.d/
+	sudo udevadm control --reload
 
 install: instrules
 	@printf "Installing Driver"

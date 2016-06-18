@@ -4,21 +4,45 @@
   "PROJECT_NAME":"artemis_pcie_default",
   "TEMPLATE":"wishbone_template.json",
   "INTERFACE":{
-    "filename":"artemis_pcie_interface.v",
+    "filename":"artemis_pcie_host_interface.v",
     "bind":{
     }
   },
   "SLAVES":{
-    "gpio1":{
-      "filename":"wb_gpio.v",
+    "pcie":{
+      "filename":"wb_artemis_pcie_platform.v",
       "bind":{
-        "gpio_out[1:0]":{
-          "loc":"led[1:0]",
+        "i_clk_100mhz_gtp_p":{
+          "loc":"i_gtp1_clk_p",
+          "direction":"input"
+        },
+        "i_clk_100mhz_gtp_n":{
+          "loc":"i_gtp1_clk_n",
+          "direction":"input"
+        },
+        "o_pcie_phy_tx_p":{
+          "loc":"o_pcie_phy_tx_p",
           "direction":"output"
         },
-        "gpio_in[3:2]":{
-          "loc":"button[1:0]",
+        "o_pcie_phy_tx_n":{
+          "loc":"o_pcie_phy_tx_n",
+          "direction":"output"
+        },
+        "i_pcie_phy_rx_p":{
+          "loc":"i_pcie_phy_rx_p",
           "direction":"input"
+        },
+        "i_pcie_phy_rx_n":{
+          "loc":"i_pcie_phy_rx_n",
+          "direction":"input"
+        },
+        "i_pcie_reset_n":{
+          "loc":"pcie_reset_n",
+          "direction":"input"
+        },
+        "o_pcie_wake_n":{
+          "loc":"pcie_wake_n",
+          "direction":"output"
         }
       }
     }
@@ -32,5 +56,119 @@
       "direction":"input",
       "loc":"clk"
     }
+  },
+
+  "internal_bind":{
+    "i_pcie_reset":{
+      "signal":"pcie_o_pcie_reset"
+    },
+    "i_pcie_per_fifo_sel":{
+      "signal":"pcie_o_pcie_per_fifo_sel"
+    },
+    "i_pcie_mem_fifo_sel":{
+      "signal":"pcie_o_pcie_mem_fifo_sel"
+    },
+    "i_pcie_dma_fifo_sel":{
+      "signal":"pcie_o_pcie_dma_fifo_sel"
+    },
+    "pcie_i_pcie_write_fin":{
+      "signal":"o_pcie_write_fin"
+    },
+    "pcie_i_pcie_read_fin":{
+      "signal":"o_pcie_read_fin"
+    },
+    "i_pcie_data_size":{
+      "signal":"pcie_o_pcie_data_size"
+    },
+    "i_pcie_data_address":{
+      "signal":"pcie_o_pcie_data_address"
+    },
+    "i_pcie_data_fifo_flg":{
+      "signal":"pcie_o_pcie_data_fifo_flg"
+    },
+    "i_pcie_data_read_flg":{
+      "signal":"pcie_o_pcie_data_read_flg"
+    },
+    "i_pcie_data_write_flg":{
+      "signal":"pcie_o_pcie_data_write_flg"
+    },
+    "pcie_i_pcie_interrupt_stb":{
+      "signal":"o_pcie_interrupt_stb"
+    },
+    "pcie_i_pcie_interrupt_value":{
+      "signal":"o_pcie_interrupt_value"
+    },
+    "pcie_i_pcie_data_clk":{
+      "signal":"o_pcie_data_clk"
+    },
+    "i_pcie_ingress_fifo_rdy":{
+      "signal":"pcie_o_pcie_ingress_fifo_rdy"
+    },
+    "pcie_i_pcie_ingress_fifo_act":{
+      "signal":"o_pcie_ingress_fifo_act"
+    },
+    "i_pcie_ingress_fifo_size":{
+      "signal":"pcie_o_pcie_ingress_fifo_size"
+    },
+    "pcie_i_pcie_ingress_fifo_stb":{
+      "signal":"o_pcie_ingress_fifo_stb"
+    },
+    "i_pcie_ingress_fifo_data":{
+      "signal":"pcie_o_pcie_ingress_fifo_data"
+    },
+    "i_pcie_ingress_fifo_idle":{
+      "signal":"pcie_o_pcie_ingress_fifo_idle"
+    },
+    "i_pcie_egress_fifo_rdy":{
+      "signal":"pcie_o_pcie_egress_fifo_rdy"
+    },
+    "pcie_i_pcie_egress_fifo_act":{
+      "signal":"o_pcie_egress_fifo_act"
+    },
+    "i_pcie_egress_fifo_size":{
+      "signal":"pcie_o_pcie_egress_fifo_size"
+    },
+    "pcie_i_pcie_egress_fifo_stb":{
+      "signal":"o_pcie_egress_fifo_stb"
+    },
+    "pcie_i_pcie_egress_fifo_data":{
+      "signal":"o_pcie_egress_fifo_data"
+    },
+    "i_usr_interrupt_value":{
+      "signal":"o_pcie_interrupt_value"
+    },
+
+
+
+
+
+    "i_idma_enable":{
+      "signal":"1'b0"
+    },
+    "dma_i_src0_ready":{
+      "signal":"o_idma_ready"
+    },
+    "dma_i_src0_size":{
+      "signal":"0"
+    },
+    "i_idma_stb":{
+      "signal":"1'b0"
+    },
+    "i_odma_enable":{
+      "signal":"1'b0"
+    },
+    "i_odma_flush":{
+      "signal":"1'b0"
+    },
+    "i_odma_activate":{
+      "signal":"0"
+    },
+    "i_odma_data":{
+      "signal":"32'h0"
+    },
+    "i_odma_stb":{
+      "signal":"1'b0"
+    }
+
   }
 }

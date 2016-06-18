@@ -25,6 +25,6 @@
     <testcase classname="test_dut" name="test_long_nysa_write_command" time="0.0">
       <skipped />
     </testcase>
-    <testcase classname="test_dut" name="test_simple_nysa_write_command" time="0.6342630386352539" />
+    <testcase classname="test_dut" name="test_simple_nysa_write_command" time="0.6422688961029053" />
   </testsuite>
 </testsuites>

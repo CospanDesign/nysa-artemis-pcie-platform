@@ -294,7 +294,7 @@ class NysaPCIE (object):
 
 DEFAULT_PATH = "/dev/nysa_pcie0"
 DEFAULT_COUNT = 1
-DEFAULT_ADDRESS = 0x01000000
+DEFAULT_ADDRESS = 0x00000000
 
 def main(argv):
     #Parse out the commandline arguments

@@ -116,6 +116,7 @@ module artemis_pcie_host_interface (
   input                       i_ddr3_rd_error,
 
   //DMA Interface
+  input                       i_idma_enable,
   input                       i_idma_flush,
   input                       i_idma_activate,
   output                      o_idma_ready,
@@ -123,6 +124,7 @@ module artemis_pcie_host_interface (
   output          [23:0]      o_idma_size,
   output          [31:0]      o_idma_data,
 
+  input                       i_odma_enable,
   input                       i_odma_flush,
   output          [1:0]       o_odma_ready,
   input           [1:0]       i_odma_activate,

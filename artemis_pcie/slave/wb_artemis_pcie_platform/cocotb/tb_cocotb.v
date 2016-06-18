@@ -251,22 +251,22 @@ wire    [23:0]     w_mem_gen_size;
 wire    [1:0]      w_mem_gen_act;
 wire               w_mem_gen_stb;
 wire    [31:0]     w_mem_gen_data;
-        
+
 wire               w_mem_sink_rdy;
 wire    [23:0]     w_mem_sink_size;
 wire               w_mem_sink_act;
 wire               w_mem_sink_stb;
 wire    [31:0]     w_mem_sink_data;
-        
+
 wire               w_odma_flush;
 wire               w_idma_flush;
-        
+
 wire    [1:0]      w_dma_gen_rdy;
 wire    [23:0]     w_dma_gen_size;
 wire    [1:0]      w_dma_gen_act;
 wire               w_dma_gen_stb;
 wire    [31:0]     w_dma_gen_data;
-        
+
 wire               w_dma_sink_rdy;
 wire    [23:0]     w_dma_sink_size;
 wire               w_dma_sink_act;

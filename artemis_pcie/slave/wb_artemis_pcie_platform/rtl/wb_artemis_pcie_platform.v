@@ -214,9 +214,6 @@ wire      [31:0]      w_address_value;
 
 //assign  w_bram_addr             = w_lcl_mem_en ? (i_wbs_adr - `LOCAL_BUFFER_OFFSET) : 0;
 
-
-
-
 artemis_pcie_controller #(
   .DATA_INGRESS_FIFO_DEPTH           (10                           ),
   .DATA_EGRESS_FIFO_DEPTH            (6                            ),
@@ -312,6 +309,9 @@ artemis_pcie_controller #(
   .cfg_err_tlp_cpl_header            (48'b0                        )
   //.cfg_err_cpl_rdy                   (cfg_err_cpl_rdy              )
 );
+
+
+assign  o_pcie_wake_n = 1'b1;
 
 always @ (posedge clk) begin
   //r_mem_2_ppfifo_stb      <= 0;
