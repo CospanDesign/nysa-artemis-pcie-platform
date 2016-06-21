@@ -87,6 +87,7 @@ module wb_artemis_pcie_platform #(
 ) (
   input               clk,
   input               rst,
+  output              o_sys_rst,
 
   //Add signals to control your device here
 
@@ -136,6 +137,8 @@ module wb_artemis_pcie_platform #(
   input               i_pcie_egress_fifo_stb,
   input       [31:0]  i_pcie_egress_fifo_data,
 
+  //DEBUG
+  output      [3:0]   o_sm_state,
 
   //PCIE Physical Signals
   input               i_clk_100mhz_gtp_p,
@@ -197,8 +200,8 @@ wire              w_ih_reset;
 //Submodules
   //Memory Interface
   //DDR3 Control Signals
-wire      [3:0]      w_ih_state;
-wire      [3:0]      w_oh_state;
+//wire      [3:0]      w_ih_state;
+//wire      [3:0]      w_oh_state;
 
 
 
@@ -221,6 +224,7 @@ artemis_pcie_controller #(
 )api (
   .clk                               (clk                          ), //User Clock
   .rst                               (rst                          ), //User Reset
+  .o_sys_rst                         (o_sys_rst                    ),
 
   //PCIE Phy Interface
   .gtp_clk_p                         (i_clk_100mhz_gtp_p           ),
@@ -289,7 +293,7 @@ artemis_pcie_controller #(
 
 //  .o_cfg_read_exec                   (o_cfg_read_exec              ),
 //  .o_cfg_sm_state                    (o_cfg_sm_state               ),
-//  .o_sm_state                        (o_sm_state                   ),
+  .o_sm_state                        (o_sm_state                   ),
 //  .o_ingress_count                   (o_ingress_count              ),
 //  .o_ingress_state                   (o_ingress_state              ),
 //  .o_ingress_ri_count                (o_ingress_ri_count           ),

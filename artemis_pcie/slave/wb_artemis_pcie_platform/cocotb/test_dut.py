@@ -61,7 +61,7 @@ def setup_dut(dut):
         yield ReadOnly()
     dut.s1.api.pcie_interface.user_reset_out <= 0;
 
-#@cocotb.test(skip = True)
+#@cocotb.test(skip = False)
 def test_write_pcie_register(dut):
     """
     Description:
@@ -217,7 +217,7 @@ def test_simple_nysa_write_command(dut):
 
 
 
-@cocotb.test(skip = True)
+@cocotb.test(skip = False)
 def test_long_nysa_write_command(dut):
     """
     Description:
@@ -247,7 +247,7 @@ def test_long_nysa_write_command(dut):
 
     idword      = 0xCD15DBE5
     command     = 0x00000001
-    data_count  = 0x00000010
+    data_count  = 0x00001000
     #data_count  = 0x00000001
     address     = 0x01000000
 
@@ -276,7 +276,7 @@ def test_long_nysa_write_command(dut):
 
 
 
-@cocotb.test(skip = True)
+@cocotb.test(skip = False)
 def test_simple_nysa_read_command(dut):
     """
     Description:
@@ -332,7 +332,7 @@ def test_simple_nysa_read_command(dut):
        cocotb.log.info("\t0x%08X" % array_to_dword(data[i:i + 4]))
 
 
-@cocotb.test(skip = True)
+@cocotb.test(skip = False)
 def test_long_nysa_read_command(dut):
     """
     Description:
@@ -387,7 +387,7 @@ def test_long_nysa_read_command(dut):
     for i in range(0, len(data), 4):
        cocotb.log.info("\t0x%08X" % array_to_dword(data[i:i + 4]))
 
-@cocotb.test(skip = True)
+#@cocotb.test(skip = False)
 def test_short_nysa_mem_write_command(dut):
     """
     Description:
@@ -456,7 +456,7 @@ def test_short_nysa_mem_write_command(dut):
     '''
 
 
-@cocotb.test(skip = True)
+#@cocotb.test(skip = False)
 def test_simple_nysa_mem_read_command(dut):
     """
     Description:
@@ -497,7 +497,7 @@ def test_simple_nysa_mem_read_command(dut):
     for i in range(0, len(data), 4):
        cocotb.log.info("\t0x%08X" % array_to_dword(data))
 
-@cocotb.test(skip = True)
+#@cocotb.test(skip = False)
 def test_short_nysa_dma_write_command(dut):
     """
     Description:
@@ -558,7 +558,7 @@ def test_short_nysa_dma_write_command(dut):
     yield (nysa.wait_clocks(400))
 
 
-@cocotb.test(skip = True)
+#@cocotb.test(skip = False)
 def test_long_nysa_dma_write_command(dut):
     """
     Description:
@@ -604,7 +604,7 @@ def test_long_nysa_dma_write_command(dut):
 
 
 
-#@cocotb.test(skip = True)
+#@cocotb.test(skip = False)
 def test_simple_nysa_dma_read_command(dut):
     """
     Description:
@@ -644,7 +644,7 @@ def test_simple_nysa_dma_read_command(dut):
        cocotb.log.info("\t0x%08X" % array_to_dword(data))
 
 
-@cocotb.test(skip = True)
+@cocotb.test(skip = False)
 def test_simple_nysa_write_err_command(dut):
     """
     Description:

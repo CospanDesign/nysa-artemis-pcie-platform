@@ -78,7 +78,6 @@ localparam        WRITE       = 2;
 localparam        FINISHED    = 3;
 
 localparam        BASE0_OFFSET  = 0;
-//localparam        BASE1_OFFSET  = ((2 ** (MEM_DEPTH) / 2));
 localparam        BASE1_OFFSET  = ((2 ** MEM_DEPTH) / 2);
 
 //registes/wires

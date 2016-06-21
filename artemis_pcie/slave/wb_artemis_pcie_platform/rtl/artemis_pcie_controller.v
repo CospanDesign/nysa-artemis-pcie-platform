@@ -203,6 +203,7 @@ module artemis_pcie_controller #(
   output                    o_dbg_reenable_stb,
   output                    o_dbg_reenable_nzero_stb, //If the host responded a bit then this will be greater than zero
 
+  output                    o_sys_rst,
   //User Interfaces
   output                    o_per_fifo_sel,
   output                    o_mem_fifo_sel,
@@ -855,7 +856,7 @@ pcie_control controller (
   .o_buf_data_count           (w_bb_data_count            ),
 
   //System Interface
-//  .o_sys_rst                  (o_sys_rst                  ),
+  .o_sys_rst                  (o_sys_rst                  ),
 
   .i_fc_ready                 (w_pcie_ctr_fc_ready        ),
   .o_fc_cmt_stb               (w_pcie_ctr_cmt_stb         ),

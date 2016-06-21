@@ -44,6 +44,7 @@ reg               w_clk_100mhz_clk_p;
 reg               w_clk_100mhz_clk_n;
 
 reg               r_pcie_reset_n    = 0;
+wire              w_sys_rst;
 
 
 //There is a bug in COCOTB when stiumlating a signal, sometimes it can be corrupted if not registered
@@ -329,6 +330,7 @@ wb_artemis_pcie_platform #(
   .clk                      (clk                      ),
   .rst                      (r_rst                    ),
 
+  .o_sys_rst                (w_sys_rst                ),
   //Artemis PCIE Interface
   .o_pcie_reset             (w_pcie_reset             ),
   .o_pcie_per_fifo_sel      (w_pcie_per_fifo_sel      ),
@@ -383,6 +385,7 @@ artemis_pcie_host_interface host_interface (
   .rst                      (r_rst                    ),
 
   //Artemis PCIE Interface
+  .i_sys_rst                (w_sys_rst                ),
   .i_pcie_reset             (w_pcie_reset             ),
   .i_pcie_per_fifo_sel      (w_pcie_per_fifo_sel      ),
   .i_pcie_mem_fifo_sel      (w_pcie_mem_fifo_sel      ),
@@ -487,7 +490,7 @@ wishbone_master wm_sim (
   .rst                  (rst                  ),
 
   .i_ih_rst             (w_ih_reset           ),
-  .i_ready              (w_in_ready           ),
+  .i_ready              (w_ih_ready           ),
   .i_command            (w_in_command         ),
   .i_address            (w_in_address         ),
   .i_data               (w_in_data            ),

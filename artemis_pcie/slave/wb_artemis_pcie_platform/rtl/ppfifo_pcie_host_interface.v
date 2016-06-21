@@ -54,6 +54,7 @@ module ppfifo_pcie_host_interface (
   input               rst,
   input               clk,
 
+  input               i_sys_rst,
   //master interface
   input               i_master_ready,
   output              o_ih_reset,
@@ -143,6 +144,8 @@ reg     [3:0]       oh_status;
 
 
 reg     [31:0]      r_cmd[3:0];
+wire                w_egress_fifo_en;
+//reg                 r_write_ack;
 
 //modules
 //asynchronous logic
@@ -152,7 +155,7 @@ assign  out_packet[2]       = i_out_data_count + 1;
 assign  out_packet[3]       = i_out_address;
 assign  out_packet[4]       = i_out_data;
 
-assign  o_ih_reset          = 0;
+assign  o_ih_reset          = i_sys_rst;
 assign  o_ih_state          = ih_state;
 assign  o_oh_state          = oh_state;
 
@@ -161,8 +164,7 @@ assign  o_command_value     = r_cmd[1];
 assign  o_count_value       = r_cmd[2];
 assign  o_address_value     = r_cmd[3];
 
-
-
+assign  w_egress_fifo_en    = (out_data_pos < out_data_count) || (oh_state == WAIT_FOR_STATUS);
 
 //synchronous logic
 //state machine to assemble 32 bit words from the incomming 8 bit words
@@ -192,6 +194,12 @@ always @ (posedge clk ) begin
     r_cmd[3]                    <=  0;
   end
   else begin
+
+/*
+    if (r_write_ack && (o_in_command[3:0] == `COMMAND_WRITE)) begin
+      o_in_command          <=  0;
+    end
+*/
 
     //Look for available Ping Pong FIFO
     if (i_ing_en && i_ingress_rdy && !o_ingress_act) begin
@@ -309,7 +317,7 @@ always @ (posedge clk ) begin
             ih_state              <=  NOTIFY_MASTER;
             o_ih_ready            <=  1;
             local_data_count      <=  local_data_count + 1;
-            if (in_data_count < i_ingress_size) begin
+            if (in_data_count < (i_ingress_size - 1)) begin
               o_ingress_stb       <=  1;
               in_data_count       <=  in_data_count + 1;
             end
@@ -340,8 +348,10 @@ always @ (posedge clk ) begin
           end
           else begin
             o_ingress_act         <=  0;
-            ih_state              <=  FINISHED;
           end
+        end
+        else begin
+          ih_state                <=  FINISHED;
         end
       end
       FINISHED: begin
@@ -373,6 +383,7 @@ integer i;
 always @ (posedge clk ) begin
   o_egress_stb                <=  0;
   o_oh_ready                  <=  0;
+//  r_write_ack                 <=  0;
   if (rst) begin
     //Output handler
     oh_state                  <=  IDLE;
@@ -387,11 +398,12 @@ always @ (posedge clk ) begin
     out_data_count            <=  0;
     out_data_pos              <=  0;
     o_egr_fin                 <=  0;
+//    r_write_ack               <=  0;
   end
   else begin
 
     //Get an Output FIFO
-    if ((i_egress_rdy > 0) && (o_egress_act == 0)) begin
+    if (w_egress_fifo_en && ((i_egress_rdy > 0) && (o_egress_act == 0))) begin
       out_fifo_count          <=  0;
       if (i_egress_rdy[0]) begin
         o_egress_act[0]          <=  1;
@@ -404,11 +416,14 @@ always @ (posedge clk ) begin
     case (oh_state)
       IDLE: begin
         //Wait for status
-        //It is strange to have this fall through state right now but later I might find a reason to NOT
-        //  Leave this state
         if (o_in_command[3:0] == `COMMAND_WRITE) begin
         //if (i_oh_en && (i_out_status[3:0] == `WRITE_RESP)) begin
           o_oh_ready              <=  1;
+/*
+          if (i_oh_en) begin
+            r_write_ack           <=  1;
+          end
+*/
         end
         o_egr_fin                 <=  0;
         if (i_egr_en) begin

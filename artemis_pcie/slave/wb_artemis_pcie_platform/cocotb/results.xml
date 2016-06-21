@@ -1,30 +1,10 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <testsuites name="results">
   <testsuite name="all" package="all" tests="0">
-    <testcase classname="test_dut" name="test_simple_nysa_mem_read_command" time="0.0">
-      <skipped />
-    </testcase>
-    <testcase classname="test_dut" name="test_long_nysa_dma_write_command" time="0.0">
-      <skipped />
-    </testcase>
-    <testcase classname="test_dut" name="test_simple_nysa_write_err_command" time="0.0">
-      <skipped />
-    </testcase>
-    <testcase classname="test_dut" name="test_short_nysa_mem_write_command" time="0.0">
-      <skipped />
-    </testcase>
-    <testcase classname="test_dut" name="test_simple_nysa_read_command" time="0.0">
-      <skipped />
-    </testcase>
-    <testcase classname="test_dut" name="test_short_nysa_dma_write_command" time="0.0">
-      <skipped />
-    </testcase>
-    <testcase classname="test_dut" name="test_long_nysa_read_command" time="0.0">
-      <skipped />
-    </testcase>
-    <testcase classname="test_dut" name="test_long_nysa_write_command" time="0.0">
-      <skipped />
-    </testcase>
-    <testcase classname="test_dut" name="test_simple_nysa_write_command" time="0.6422688961029053" />
+    <testcase classname="test_dut" name="test_long_nysa_read_command" time="5.501962184906006" />
+    <testcase classname="test_dut" name="test_long_nysa_write_command" time="12.168896913528442" />
+    <testcase classname="test_dut" name="test_simple_nysa_read_command" time="0.6947479248046875" />
+    <testcase classname="test_dut" name="test_simple_nysa_write_command" time="0.6187748908996582" />
+    <testcase classname="test_dut" name="test_simple_nysa_write_err_command" time="0.6074478626251221" />
   </testsuite>
 </testsuites>

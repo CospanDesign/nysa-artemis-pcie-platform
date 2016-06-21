@@ -48,10 +48,6 @@
     }
   },
   "board_bind":{
-    "rst":{
-      "direction":"input",
-      "loc":"adapter_rst"
-    },
     "clk":{
       "direction":"input",
       "loc":"clk"
@@ -59,6 +55,9 @@
   },
 
   "internal_bind":{
+    "i_sys_rst":{
+      "signal":"pcie_o_sys_rst"
+    },
     "i_pcie_reset":{
       "signal":"pcie_o_pcie_reset"
     },

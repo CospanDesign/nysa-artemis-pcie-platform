@@ -73,7 +73,7 @@ class ArtemisPciePlatform(Platform):
         for path, dirs, files in os.walk(DEV_PATH):
             for f in files:
                 if f.startswith(DRIVER_NAME):
-                    ids.append(f)
+                    ids.append(os.path.join(path, f))
             
 
         #if self.status: self.status.Warning("Scan function not implemented yet!")

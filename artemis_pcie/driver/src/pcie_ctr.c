@@ -346,6 +346,7 @@ ssize_t nysa_pcie_write_data(nysa_pcie_dev_t *dev, const char __user * user_buf,
   unsigned char prev_buffer_index = 0;
   unsigned char buffer_index = 0;
 
+  mod_info_dbg("Write Data\n");
   //Clear out the KFIFO
   while (!kfifo_is_empty(&dev->rw_fifo))
   {
@@ -468,7 +469,8 @@ ssize_t nysa_pcie_write_data(nysa_pcie_dev_t *dev, const char __user * user_buf,
     }
     prev_buffer_index = buffer_index;
   }
-  while (pos < count);
+  //while (pos < count);
+  while (1);
 
   mod_info_dbg("Finished!\n");
   return count;
