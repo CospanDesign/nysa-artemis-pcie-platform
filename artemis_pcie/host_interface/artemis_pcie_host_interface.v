@@ -178,9 +178,9 @@ wire    [31:0]                                  w_per_egress_data;
 wire                                            w_mem_write_en;
 wire                                            w_mem_read_en;
 
-wire                                            i_pcie_per_fifo_sel;
-wire                                            i_pcie_mem_fifo_sel;
-wire                                            i_pcie_dma_fifo_sel;
+//wire                                            i_pcie_per_fifo_sel;
+//wire                                            i_pcie_mem_fifo_sel;
+//wire                                            i_pcie_dma_fifo_sel;
 
 wire    [27:0]                                  w_mem_adr;
 
@@ -201,10 +201,10 @@ wire                                            w_ddr3_egress_inactive;
 wire    [3:0]                                   w_ih_state;
 wire    [3:0]                                   w_oh_state;
 
-wire    [31:0]                                  w_id_value;
-wire    [31:0]                                  w_command_value;
-wire    [31:0]                                  w_count_value;
-wire    [31:0]                                  w_address_value;
+//wire    [31:0]                                  w_id_value;
+//wire    [31:0]                                  w_command_value;
+//wire    [31:0]                                  w_count_value;
+//wire    [31:0]                                  w_address_value;
 
 
  
@@ -418,10 +418,12 @@ ppfifo_pcie_host_interface phi (
   .i_out_data         (i_out_data       ),
   .i_out_data_count   (i_out_data_count ),
 
+/*
   .o_id_value         (w_id_value           ),
   .o_command_value    (w_command_value      ),
   .o_count_value      (w_count_value        ),
   .o_address_value    (w_address_value      ),
+*/
 
   //Ingress Ping Pong
   .i_ingress_rdy      (w_per_ingress_rdy    ),
